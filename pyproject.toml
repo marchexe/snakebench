@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snakebench-advisor"
+version = "0.2.0"
+description = "Telemetry-driven Snakemake resource advisor using PSB-style benchmarks"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Snakebench Contributors"}
+]
+keywords = ["snakemake", "bioinformatics", "benchmarking", "telemetry", "resource-allocation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "pandas",
+    "pyarrow",
+    "tabulate",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+snakebench = "snakebench.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
