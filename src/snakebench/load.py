@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Union
 import pandas as pd
 
+from .psb import normalize_psb_dataframe
+
 
 def load_parquet_files(path: Union[str, Path]) -> pd.DataFrame:
     """
@@ -69,4 +71,4 @@ def load_parquet_files(path: Union[str, Path]) -> pd.DataFrame:
         raise ValueError(f"No parquet files could be loaded from: {path}")
 
     result = pd.concat(dfs, ignore_index=True)
-    return result
+    return normalize_psb_dataframe(result)

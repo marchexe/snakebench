@@ -11,7 +11,7 @@ def detect_input_size_column(df: pd.DataFrame) -> Optional[str]:
 
     Checks for these columns in order:
     - input_size_mb, inputs_size_mb, total_input_size_mb (MB)
-    - input_bytes, inputs_bytes, total_input_bytes (bytes)
+    - input_bytes, inputs_bytes, total_input_bytes, input_size (bytes)
 
     Parameters
     ----------
@@ -24,7 +24,12 @@ def detect_input_size_column(df: pd.DataFrame) -> Optional[str]:
         The name of the input size column, or None if not found.
     """
     mb_candidates = ["input_size_mb", "inputs_size_mb", "total_input_size_mb"]
-    bytes_candidates = ["input_bytes", "inputs_bytes", "total_input_bytes"]
+    bytes_candidates = [
+        "input_bytes",
+        "inputs_bytes",
+        "total_input_bytes",
+        "input_size",
+    ]
 
     # Check MB columns first
     for col in mb_candidates:
@@ -65,8 +70,8 @@ def extract_input_size_mb(df: pd.DataFrame) -> pd.Series:
         # Already in MB
         return df[col].copy()
     else:
-        # Convert from bytes to MB
-        return df[col] / (1024 * 1024)
+        # PSB parquet exports use input_size in bytes.
+        return pd.to_numeric(df[col], errors="coerce") / (1024 * 1024)
 
 
 def add_size_bins(df: pd.DataFrame) -> pd.DataFrame:
@@ -75,6 +80,7 @@ def add_size_bins(df: pd.DataFrame) -> pd.DataFrame:
 
     Creates bins:
     - unknown: no input size data
+    - zero: exactly 0 MB
     - small: 0-100 MB
     - medium: 100-1000 MB
     - large: 1000-10000 MB
@@ -100,6 +106,8 @@ def add_size_bins(df: pd.DataFrame) -> pd.DataFrame:
     for size in size_mb:
         if pd.isna(size):
             bins.append("unknown")
+        elif size == 0:
+            bins.append("zero")
         elif size < 100:
             bins.append("small")
         elif size < 1000:

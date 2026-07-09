@@ -9,7 +9,7 @@ from .load import load_parquet_files
 from .summarize import summarize_by_tool
 from .advise import suggest_resources, suggest_resources_stratified
 from .report import build_markdown_report
-from .readiness import build_readiness_markdown
+from .readiness import build_readiness_markdown, inspect_dataset
 
 
 def cmd_summarize(args):
@@ -122,6 +122,7 @@ def cmd_report(args):
             suggestions,
             len(df),
             stratified_suggestions_df=stratified_suggestions,
+            psb_report=inspect_dataset(df),
         )
 
         output_path = Path(args.out)

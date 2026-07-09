@@ -1,6 +1,6 @@
 # Snakebench Advisor
 
-A local-first, presentable v0.2 prototype for turning Snakemake / PSB-style benchmark telemetry into resource usage reports and confidence-aware Snakemake resource suggestions.
+A local-first, presentable v0.2.1 prototype for turning Snakemake / PSB-style benchmark telemetry into resource usage reports and confidence-aware Snakemake resource suggestions.
 
 Snakebench Advisor explores a simple path:
 
@@ -21,6 +21,29 @@ This repository includes Week 11, 2026 telemetry from five bioinformatics tools:
 - `wgsim-2026-W11.parquet`
 
 The dataset has about 205 observations. That is enough to demonstrate the local telemetry pipeline and generate cautious heuristic advice, but it is too small and incomplete for reliable ML prediction.
+
+## Relationship to PSB
+
+PSB (Parsl Scalability Benchmark) provides the telemetry protocol, collector/server, and Snakemake logger plugin that define the upstream field names and semantics. Snakebench Advisor consumes PSB-style telemetry locally and turns it into summaries, readiness checks, and cautious resource suggestions.
+
+Snakebench does not replace PSB. It is a local analysis layer for PSB-style parquet exports and similar telemetry files. Where possible, Snakebench follows PSB field names and units directly.
+
+## PSB compatibility
+
+Snakebench v0.2.1 recognizes canonical PSB parquet/export fields:
+
+- `input_size` and `output_size` are byte counts in PSB parquet exports.
+- Snakebench derives `input_size_mb` and `output_size_mb` for local analysis.
+- `resources` is treated as the upstream declared-resource carrier.
+- Simple JSON resources such as `{"_cores": 4, "mem_mb": 8000}` are parsed into `declared_cores` and `declared_mem_mb`.
+- PSB environment fields such as `host_hash`, `cpu_model`, `cpu_features`, `cpu_cores`, `kernel_version`, `kernel_string`, `sm_version`, and `deploy_mode` are recognized by readiness checks.
+
+Current limitations:
+
+- `resources` may be present but empty in exported data.
+- Snakebench does not parse full `inputs` / `outputs` file-entry JSON yet.
+- Snakebench does not parse Snakefiles or audit declared rule resources yet.
+- Prediction and ML remain future work and require more data and evaluation.
 
 ## Installation
 
@@ -81,7 +104,7 @@ Dry mode does not run workflows. It audits the telemetry dataset and checks whet
 - future ML prediction
 - workflow resource audit
 
-This is useful because small telemetry datasets can support summaries and cautious advice, but not reliable ML prediction. The current dataset has limited input size metadata, so input-size-aware suggestions may fall back to `unknown`.
+This is useful because small telemetry datasets can support summaries and cautious advice, but not reliable ML prediction. PSB input-size fields are recognized when present; rows with missing input-size values may still fall back to `unknown`.
 
 ```bash
 snakebench dry data/
@@ -100,9 +123,10 @@ Example generated reports live in `reports/`:
 - [reports/example_report.md](reports/example_report.md)
 - [reports/readiness_report.md](reports/readiness_report.md)
 
-## What v0.2 does
+## What v0.2.1 does
 
 - Loads local parquet telemetry.
+- Normalizes canonical PSB fields such as `input_size`, `output_size`, `resources`, and environment metadata.
 - Summarizes runtime and memory by tool.
 - Generates heuristic Snakemake resource suggestions.
 - Supports optional input-size stratification with `--stratify input-size`.

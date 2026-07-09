@@ -10,6 +10,7 @@ def build_markdown_report(
     suggestions_df: pd.DataFrame,
     dataset_size: int,
     stratified_suggestions_df: Optional[pd.DataFrame] = None,
+    psb_report: Optional[dict] = None,
 ) -> str:
     """
     Build a markdown report from telemetry summaries and suggestions.
@@ -24,6 +25,8 @@ def build_markdown_report(
         Total number of observations in the raw dataset.
     stratified_suggestions_df : pd.DataFrame, optional
         Output from suggest_resources_stratified() for input-size-aware suggestions.
+    psb_report : dict, optional
+        Output from inspect_dataset() with PSB compatibility facts.
 
     Returns
     -------
@@ -54,6 +57,24 @@ to characterize tool behavior from a small dataset.
 This dataset represents execution telemetry collected from a specific bioinformatics workflow.
 The observations come from multiple runs of tools like AWK, BWA-MEM2, gzip, samtools, and wgsim.
 
+"""
+
+    if psb_report:
+        report += f"""### PSB Compatibility
+
+- **PSB-like records:** {psb_report["psb_like_records"]} ({psb_report["psb_like_fraction"]:.1%})
+- **Input size recognized:** {"yes" if psb_report["has_input_size"] else "no"}
+- **PSB input size fields recognized:** {"yes" if psb_report["has_psb_input_size"] else "no"}
+- **Resources recognized:** {"yes" if psb_report["has_declared_resources"] else "no"}
+- **PSB resources field recognized:** {"yes" if psb_report["has_psb_resources"] else "no"}
+- **Environment metadata recognized:** {"yes" if psb_report["has_environment_metadata"] else "no"}
+
+Snakebench consumes PSB-style telemetry locally and follows PSB field names and units where possible.
+In PSB parquet exports, `input_size` and `output_size` are byte counts; Snakebench derives MB-scale columns for local analysis.
+
+"""
+
+    report += """
 ## Tool Summary
 
 The following table shows the distribution of observations and basic runtime/memory statistics for each tool:
@@ -245,7 +266,7 @@ Snakebench Advisor explores the next step in this pipeline:
 
 ---
 
-**Version:** Snakebench Advisor v0.2  
+**Version:** Snakebench Advisor v0.2.1  
 **Status:** Prototype  
 **Audience:** Early adopters, researchers, Snakemake users exploring telemetry-driven resource allocation.
 """

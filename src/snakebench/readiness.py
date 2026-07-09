@@ -4,36 +4,67 @@ from __future__ import annotations
 
 import pandas as pd
 
+from .psb import is_psb_like_row
+
 RUNTIME_COLUMNS = ["runtime_sec", "runtime_seconds", "seconds", "s", "runtime"]
 MEMORY_COLUMNS = ["max_rss_mb", "max_memory_mb", "memory_mb", "max_rss", "mem_mb"]
 THREAD_COLUMNS = ["threads", "num_threads", "n_threads"]
 INPUT_SIZE_COLUMNS = [
     "input_size_mb",
+    "input_size",
     "inputs_size_mb",
     "total_input_size_mb",
     "input_bytes",
     "inputs_bytes",
     "total_input_bytes",
+    "inputs",
+    "num_inputs",
+    "input_type",
 ]
 DECLARED_RESOURCE_COLUMNS = [
     "declared_mem_mb",
-    "resources_mem_mb",
     "declared_runtime",
-    "resources_runtime",
+    "declared_cores",
+    "resources",
 ]
 FAILURE_COLUMNS = ["status", "exit_code", "failed", "oom", "error_type"]
 ENVIRONMENT_COLUMNS = [
     "environment_id",
     "env_id",
+    "host_hash",
     "hostname_hash",
     "cpu_model",
+    "cpu_features",
+    "cpu_cores",
+    "l2_cache_kb",
+    "l3_cache_kb",
+    "cpu_freq_mhz",
     "os",
     "kernel",
+    "kernel_version",
+    "kernel_string",
     "platform",
+    "sm_version",
     "snakemake_version",
     "deploy_mode",
 ]
 TOOL_VERSION_COLUMNS = ["tool_version"]
+PSB_INPUT_SIZE_COLUMNS = ["input_size", "inputs", "num_inputs", "input_type"]
+PSB_RESOURCE_COLUMNS = ["resources"]
+PSB_ENVIRONMENT_COLUMNS = [
+    "host_hash",
+    "cpu_model",
+    "cpu_features",
+    "cpu_cores",
+    "l2_cache_kb",
+    "l3_cache_kb",
+    "cpu_freq_mhz",
+    "os",
+    "kernel_version",
+    "kernel_string",
+    "sm_version",
+    "deploy_mode",
+]
 
 
 def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
@@ -58,9 +89,26 @@ def inspect_dataset(df: pd.DataFrame) -> dict:
     declared_resource_cols = _find_columns(df, DECLARED_RESOURCE_COLUMNS)
     failure_cols = _find_columns(df, FAILURE_COLUMNS)
     environment_cols = _find_columns(df, ENVIRONMENT_COLUMNS)
+    psb_input_cols = _find_columns(df, PSB_INPUT_SIZE_COLUMNS)
+    psb_resource_cols = _find_columns(df, PSB_RESOURCE_COLUMNS)
+    psb_environment_cols = _find_columns(df, PSB_ENVIRONMENT_COLUMNS)
+
+    if len(df) == 0:
+        psb_like_records = 0
+    elif "is_psb_like" in df.columns:
+        psb_like_records = int(df["is_psb_like"].fillna(False).sum())
+    else:
+        psb_like_records = int(df.apply(is_psb_like_row, axis=1).sum())
+
+    psb_like_fraction = (
+        float(psb_like_records / len(df)) if len(df) else 0.0
+    )
 
     unique_environments = None
-    environment_id_col = _find_column(df, ["environment_id", "env_id", "hostname_hash"])
+    environment_id_col = _find_column(
+        df,
+        ["environment_id", "env_id", "host_hash", "hostname_hash"],
+    )
     if environment_id_col:
         unique_environments = int(df[environment_id_col].nunique(dropna=True))
     elif environment_cols:
@@ -88,6 +136,14 @@ def inspect_dataset(df: pd.DataFrame) -> dict:
         "has_declared_resources": bool(declared_resource_cols),
         "failure_columns": failure_cols,
         "has_failure_info": bool(failure_cols),
+        "psb_like_records": psb_like_records,
+        "psb_like_fraction": psb_like_fraction,
+        "has_psb_input_size": bool(psb_input_cols),
+        "has_psb_resources": bool(psb_resource_cols),
+        "has_psb_environment": bool(psb_environment_cols),
+        "psb_input_columns": psb_input_cols,
+        "psb_resource_columns": psb_resource_cols,
+        "psb_environment_columns": psb_environment_cols,
     }
 
 
@@ -211,6 +267,7 @@ def build_readiness_markdown(df: pd.DataFrame) -> str:
 - **Observations:** {report["observations"]}
 - **Tools:** {report["tools"]}
 - **Unique environments:** {unique_env_text}
+- **PSB-like records:** {report["psb_like_records"]} ({report["psb_like_fraction"]:.1%})
 
 ## Available metadata
 
@@ -222,6 +279,15 @@ def build_readiness_markdown(df: pd.DataFrame) -> str:
 - **Environment metadata:** {_yes_no(report["has_environment_metadata"])}
 - **Declared Snakemake resources:** {_yes_no(report["has_declared_resources"])}
 - **Failure/OOM information:** {_yes_no(report["has_failure_info"])}
+
+## PSB compatibility
+
+- **PSB input size fields recognized:** {_yes_no(report["has_psb_input_size"])}
+- **PSB resources field recognized:** {_yes_no(report["has_psb_resources"])}
+- **PSB environment fields recognized:** {_yes_no(report["has_psb_environment"])}
+- **PSB input columns:** {", ".join(report["psb_input_columns"]) if report["psb_input_columns"] else "none"}
+- **PSB resource columns:** {", ".join(report["psb_resource_columns"]) if report["psb_resource_columns"] else "none"}
+- **PSB environment columns:** {", ".join(report["psb_environment_columns"]) if report["psb_environment_columns"] else "none"}
 
 ## Readiness levels
 

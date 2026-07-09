@@ -32,6 +32,17 @@ def test_detect_input_size_column_finds_bytes():
     assert detect_input_size_column(df) == "input_bytes"
 
 
+def test_detect_input_size_column_finds_psb_input_size():
+    """Test that canonical PSB input_size is treated as bytes."""
+    df = pd.DataFrame(
+        {
+            "tool": ["a"],
+            "input_size": [1024 * 1024 * 100],
+        }
+    )
+    assert detect_input_size_column(df) == "input_size"
+
+
 def test_detect_input_size_column_returns_none():
     """Test that detect_input_size_column returns None if no size column."""
     df = pd.DataFrame(
@@ -67,6 +78,17 @@ def test_extract_input_size_mb_from_bytes():
     result = extract_input_size_mb(df)
     assert abs(result.iloc[0] - 100.0) < 0.01
     assert abs(result.iloc[1] - 200.0) < 0.01
+
+
+def test_extract_input_size_mb_from_psb_input_size():
+    """Test extraction and conversion from PSB input_size bytes."""
+    df = pd.DataFrame(
+        {
+            "input_size": [300 * 1024 * 1024],
+        }
+    )
+    result = extract_input_size_mb(df)
+    assert abs(result.iloc[0] - 300.0) < 0.01
 
 
 def test_extract_input_size_mb_no_column():

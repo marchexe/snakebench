@@ -1,6 +1,6 @@
 # Snakebench Advisor Report
 
-**Generated:** 2026-07-09 15:46:20 UTC
+**Generated:** 2026-07-09 21:26:11 UTC
 
 ## Executive Summary
 
@@ -18,6 +18,19 @@ to characterize tool behavior from a small dataset.
 
 This dataset represents execution telemetry collected from a specific bioinformatics workflow.
 The observations come from multiple runs of tools like AWK, BWA-MEM2, gzip, samtools, and wgsim.
+
+### PSB Compatibility
+
+- **PSB-like records:** 205 (100.0%)
+- **Input size recognized:** yes
+- **PSB input size fields recognized:** yes
+- **Resources recognized:** yes
+- **PSB resources field recognized:** yes
+- **Environment metadata recognized:** yes
+
+Snakebench consumes PSB-style telemetry locally and follows PSB field names and units where possible.
+In PSB parquet exports, `input_size` and `output_size` are byte counts; Snakebench derives MB-scale columns for local analysis.
+
 
 ## Tool Summary
 
@@ -62,11 +75,15 @@ However, these are still heuristic suggestions based on robust statistics, not l
 
 | tool | input_size_bin | observations | p90_runtime_sec | suggested_runtime | p95_memory_mb | suggested_mem_mb | confidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| awk | unknown | 10 | 0.16 | 00:00:01 | 7.95 | 256 | medium |
-| bwa-mem2 | unknown | 29 | 19.09 | 00:00:29 | 442.34 | 768 | medium |
-| gzip | unknown | 61 | 12.69 | 00:00:20 | 5.80 | 256 | high |
-| samtools | unknown | 86 | 1.21 | 00:00:02 | 403.51 | 512 | high |
-| wgsim | unknown | 19 | 2.19 | 00:00:04 | 21.56 | 256 | medium |
+| awk | zero | 10 | 0.16 | 00:00:01 | 7.95 | 256 | medium |
+| bwa-mem2 | small | 12 | 19.57 | 00:00:30 | 442.71 | 768 | medium |
+| bwa-mem2 | zero | 17 | 18.94 | 00:00:29 | 441.72 | 768 | medium |
+| gzip | medium | 16 | 12.86 | 00:00:20 | 5.80 | 256 | medium |
+| gzip | zero | 45 | 12.44 | 00:00:19 | 5.78 | 256 | medium |
+| samtools | small | 36 | 1.22 | 00:00:02 | 403.54 | 512 | medium |
+| samtools | zero | 50 | 1.20 | 00:00:02 | 403.50 | 512 | high |
+| wgsim | small | 8 | 2.18 | 00:00:04 | 21.68 | 256 | low |
+| wgsim | zero | 11 | 2.19 | 00:00:04 | 21.26 | 256 | medium |
 
 ### Notes on Stratified Suggestions
 
@@ -129,6 +146,6 @@ Snakebench Advisor explores the next step in this pipeline:
 
 ---
 
-**Version:** Snakebench Advisor v0.2  
+**Version:** Snakebench Advisor v0.2.1  
 **Status:** Prototype  
 **Audience:** Early adopters, researchers, Snakemake users exploring telemetry-driven resource allocation.
