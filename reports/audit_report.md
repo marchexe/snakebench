@@ -3,21 +3,21 @@
 ## Summary
 
 - **Rules audited:** 5
-- **OK:** 1
+- **OK:** 2
 - **Missing resources:** 0
-- **Underrequested resources:** 4
+- **Underrequested resources:** 3
 - **Overrequested resources:** 0
 - **Unmatched rules:** 0
 
 ## Rule audit table
 
-| rule_name | match_type | match_key | observations | declared_mem_mb | declared_runtime | suggested_mem_mb | suggested_runtime | status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| align_reads | psb_tool | bwa-mem2 | 29 | 512.00 | 00:00:20 | 768 | 00:00:29 | underrequested_mem; underrequested_runtime |
-| sort_bam | psb_tool | samtools | 86 | 256.00 | 00:00:01 | 512 | 00:00:02 | underrequested_mem; underrequested_runtime |
-| compress_fastq | psb_tool | gzip | 61 | 256.00 | 00:00:30 | 256 | 00:00:20 | ok |
-| simulate_reads | psb_tool | wgsim | 19 | 128.00 | 00:00:03 | 256 | 00:00:04 | underrequested_mem; underrequested_runtime |
-| summarize_table | psb_tool | awk | 10 | 64.00 | 00:00:01 | 256 | 00:00:01 | underrequested_mem |
+| rule_name | match_key | match_type | observations | declared_threads | declared_mem_mb | declared_runtime | observed_p95_memory_mb | required_mem_mb | observed_p90_runtime_sec | suggested_mem_mb | suggested_runtime | status | reason |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| align_reads | bwa-mem2 | psb_tool | 29 | 4 | 512.00 | 00:00:20 | 442.34 | 552.92 | 19.09 | 768 | 00:00:29 | underrequested_runtime | Suggested runtime is more than 10% above declared runtime. |
+| sort_bam | samtools | psb_tool | 86 | 4 | 256.00 | 00:00:01 | 403.51 | 504.38 | 1.21 | 512 | 00:00:02 | underrequested_mem; underrequested_runtime | Declared mem_mb is more than 10% below required memory. Suggested runtime is more than 10% above declared runtime. |
+| compress_fastq | gzip | psb_tool | 61 | 1 | 256.00 | 00:00:30 | 5.80 | 7.25 | 12.69 | 256 | 00:00:20 | ok | Declared resources are broadly aligned with telemetry suggestions. |
+| simulate_reads | wgsim | psb_tool | 19 | 1 | 128.00 | 00:00:03 | 21.56 | 26.95 | 2.19 | 256 | 00:00:04 | underrequested_runtime | Suggested runtime is more than 10% above declared runtime. |
+| summarize_table | awk | psb_tool | 10 | 1 | 64.00 | 00:00:01 | 7.95 | 9.94 | 0.16 | 256 | 00:00:01 | ok | Declared resources are broadly aligned with telemetry suggestions. |
 
 
 ## Missing resources
@@ -27,12 +27,11 @@
 
 ## Underrequested resources
 
-| rule_name | match_type | match_key | observations | declared_mem_mb | declared_runtime | suggested_mem_mb | suggested_runtime | status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| align_reads | psb_tool | bwa-mem2 | 29 | 512.00 | 00:00:20 | 768 | 00:00:29 | underrequested_mem; underrequested_runtime |
-| sort_bam | psb_tool | samtools | 86 | 256.00 | 00:00:01 | 512 | 00:00:02 | underrequested_mem; underrequested_runtime |
-| simulate_reads | psb_tool | wgsim | 19 | 128.00 | 00:00:03 | 256 | 00:00:04 | underrequested_mem; underrequested_runtime |
-| summarize_table | psb_tool | awk | 10 | 64.00 | 00:00:01 | 256 | 00:00:01 | underrequested_mem |
+| rule_name | match_key | match_type | observations | declared_threads | declared_mem_mb | declared_runtime | observed_p95_memory_mb | required_mem_mb | observed_p90_runtime_sec | suggested_mem_mb | suggested_runtime | status | reason |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| align_reads | bwa-mem2 | psb_tool | 29 | 4 | 512.00 | 00:00:20 | 442.34 | 552.92 | 19.09 | 768 | 00:00:29 | underrequested_runtime | Suggested runtime is more than 10% above declared runtime. |
+| sort_bam | samtools | psb_tool | 86 | 4 | 256.00 | 00:00:01 | 403.51 | 504.38 | 1.21 | 512 | 00:00:02 | underrequested_mem; underrequested_runtime | Declared mem_mb is more than 10% below required memory. Suggested runtime is more than 10% above declared runtime. |
+| simulate_reads | wgsim | psb_tool | 19 | 1 | 128.00 | 00:00:03 | 21.56 | 26.95 | 2.19 | 256 | 00:00:04 | underrequested_runtime | Suggested runtime is more than 10% above declared runtime. |
 
 
 ## Overrequested resources

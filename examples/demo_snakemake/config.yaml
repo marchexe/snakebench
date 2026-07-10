@@ -1,4 +1,4 @@
 psb:
   workflow_url: "https://github.com/example/snakebench-demo"
-  workflow_version: "demo-v0.4.0"
+  workflow_version: "demo-v0.4.1"
   category: "audit-demo"

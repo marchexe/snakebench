@@ -110,6 +110,7 @@ def suggest_resources(df: pd.DataFrame) -> pd.DataFrame:
         - suggested_runtime
         - median_memory_mb
         - p95_memory_mb
+        - required_mem_mb
         - suggested_mem_mb
         - confidence
         - reason
@@ -135,9 +136,10 @@ def suggest_resources(df: pd.DataFrame) -> pd.DataFrame:
             suggested_runtime_hms = "N/A"
 
         if pd.notna(p95_memory) and p95_memory > 0:
-            # Round up to nearest 256 MB
-            suggested_mem_mb = ceil((p95_memory * 1.25) / 256) * 256
+            required_mem_mb = p95_memory * 1.25
+            suggested_mem_mb = ceil(required_mem_mb / 256) * 256
         else:
+            required_mem_mb = np.nan
             suggested_mem_mb = np.nan
 
         # Calculate coefficient of variation for runtime (if we have variance info)
@@ -163,6 +165,7 @@ def suggest_resources(df: pd.DataFrame) -> pd.DataFrame:
                 "suggested_runtime": suggested_runtime_hms,
                 "median_memory_mb": median_memory,
                 "p95_memory_mb": p95_memory,
+                "required_mem_mb": required_mem_mb,
                 "suggested_mem_mb": suggested_mem_mb,
                 "confidence": conf,
                 "reason": reason,
@@ -202,6 +205,7 @@ def suggest_resources_stratified(
         - suggested_runtime
         - median_memory_mb
         - p95_memory_mb
+        - required_mem_mb
         - suggested_mem_mb
         - confidence
         - reason
@@ -274,8 +278,10 @@ def suggest_resources_stratified(
             suggested_runtime_hms = "N/A"
 
         if pd.notna(p95_memory) and p95_memory > 0:
-            suggested_mem_mb = ceil((p95_memory * 1.25) / 256) * 256
+            required_mem_mb = p95_memory * 1.25
+            suggested_mem_mb = ceil(required_mem_mb / 256) * 256
         else:
+            required_mem_mb = np.nan
             suggested_mem_mb = np.nan
 
         # Confidence and reason
@@ -306,6 +312,7 @@ def suggest_resources_stratified(
                 "suggested_runtime": suggested_runtime_hms,
                 "median_memory_mb": median_memory,
                 "p95_memory_mb": p95_memory,
+                "required_mem_mb": required_mem_mb,
                 "suggested_mem_mb": suggested_mem_mb,
                 "confidence": conf,
                 "reason": reason,

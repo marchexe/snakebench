@@ -1,6 +1,6 @@
 # Snakebench Advisor Report
 
-**Generated:** 2026-07-10 11:34:48 UTC
+**Generated:** 2026-07-10 18:50:55 UTC
 
 ## Summary
 
@@ -30,30 +30,32 @@
 
 ## Resource Suggestions
 
-Suggestions use `ceil(p90_runtime * 1.5)` and `ceil(p95_memory * 1.25 / 256) * 256`.
+Runtime suggestion uses `ceil(p90_runtime * 1.5)`. Memory requirement uses p95(max_rss_mb) × 1.25. The displayed suggested_mem_mb is rounded up to the nearest 256 MB for scheduler-friendly resource declarations.
 
-| tool | observations | p90_runtime_sec | suggested_runtime | p95_memory_mb | suggested_mem_mb | confidence |
-| --- | --- | --- | --- | --- | --- | --- |
-| samtools | 86 | 1.21 | 00:00:02 | 403.51 | 512 | high |
-| gzip | 61 | 12.69 | 00:00:20 | 5.80 | 256 | high |
-| bwa-mem2 | 29 | 19.09 | 00:00:29 | 442.34 | 768 | medium |
-| wgsim | 19 | 2.19 | 00:00:04 | 21.56 | 256 | medium |
-| awk | 10 | 0.16 | 00:00:01 | 7.95 | 256 | medium |
+Audit memory status is based on required_mem_mb, not the rounded suggested_mem_mb.
+
+| tool | observations | p90_runtime_sec | suggested_runtime | p95_memory_mb | required_mem_mb | suggested_mem_mb | confidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| samtools | 86 | 1.21 | 00:00:02 | 403.51 | 504.38 | 512 | high |
+| gzip | 61 | 12.69 | 00:00:20 | 5.80 | 7.25 | 256 | high |
+| bwa-mem2 | 29 | 19.09 | 00:00:29 | 442.34 | 552.92 | 768 | medium |
+| wgsim | 19 | 2.19 | 00:00:04 | 21.56 | 26.95 | 256 | medium |
+| awk | 10 | 0.16 | 00:00:01 | 7.95 | 9.94 | 256 | medium |
 
 
 ## Input-Size Stratified Suggestions
 
-| tool | input_size_bin | observations | p90_runtime_sec | suggested_runtime | p95_memory_mb | suggested_mem_mb | confidence |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| awk | zero | 10 | 0.16 | 00:00:01 | 7.95 | 256 | medium |
-| bwa-mem2 | small | 12 | 19.57 | 00:00:30 | 442.71 | 768 | medium |
-| bwa-mem2 | zero | 17 | 18.94 | 00:00:29 | 441.72 | 768 | medium |
-| gzip | medium | 16 | 12.86 | 00:00:20 | 5.80 | 256 | medium |
-| gzip | zero | 45 | 12.44 | 00:00:19 | 5.78 | 256 | medium |
-| samtools | small | 36 | 1.22 | 00:00:02 | 403.54 | 512 | medium |
-| samtools | zero | 50 | 1.20 | 00:00:02 | 403.50 | 512 | high |
-| wgsim | small | 8 | 2.18 | 00:00:04 | 21.68 | 256 | low |
-| wgsim | zero | 11 | 2.19 | 00:00:04 | 21.26 | 256 | medium |
+| tool | input_size_bin | observations | p90_runtime_sec | suggested_runtime | p95_memory_mb | required_mem_mb | suggested_mem_mb | confidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| awk | zero | 10 | 0.16 | 00:00:01 | 7.95 | 9.94 | 256 | medium |
+| bwa-mem2 | small | 12 | 19.57 | 00:00:30 | 442.71 | 553.38 | 768 | medium |
+| bwa-mem2 | zero | 17 | 18.94 | 00:00:29 | 441.72 | 552.16 | 768 | medium |
+| gzip | medium | 16 | 12.86 | 00:00:20 | 5.80 | 7.25 | 256 | medium |
+| gzip | zero | 45 | 12.44 | 00:00:19 | 5.78 | 7.23 | 256 | medium |
+| samtools | small | 36 | 1.22 | 00:00:02 | 403.54 | 504.42 | 512 | medium |
+| samtools | zero | 50 | 1.20 | 00:00:02 | 403.50 | 504.38 | 512 | high |
+| wgsim | small | 8 | 2.18 | 00:00:04 | 21.68 | 27.10 | 256 | low |
+| wgsim | zero | 11 | 2.19 | 00:00:04 | 21.26 | 26.58 | 256 | medium |
 
 
 ## Limitations
@@ -71,5 +73,5 @@ Suggestions use `ceil(p90_runtime * 1.5)` and `ceil(p95_memory * 1.25 / 256) * 2
 
 ---
 
-**Version:** Snakebench Advisor v0.4.0
+**Version:** Snakebench Advisor v0.4.1
 **Status:** Prototype

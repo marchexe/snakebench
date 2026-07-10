@@ -51,6 +51,7 @@ def test_suggest_resources_returns_suggested_columns():
         "tool",
         "observations",
         "suggested_runtime",
+        "required_mem_mb",
         "suggested_mem_mb",
         "confidence",
     ]
@@ -59,7 +60,7 @@ def test_suggest_resources_returns_suggested_columns():
 
 
 def test_suggest_resources_memory_calculation():
-    """Test that memory suggestion is ceil(p95 * 1.25 / 256) * 256."""
+    """Test raw memory requirement and rounded scheduler suggestion."""
     df = pd.DataFrame(
         {
             "tool": ["tool_a"],
@@ -73,6 +74,7 @@ def test_suggest_resources_memory_calculation():
 
     result = suggest_resources(df)
 
+    assert result.loc[0, "required_mem_mb"] == 1280.0
     assert result.loc[0, "suggested_mem_mb"] == 1280.0
 
 
@@ -141,6 +143,7 @@ def test_suggest_resources_handles_nan():
     result = suggest_resources(df)
 
     assert result.loc[0, "suggested_runtime"] == "N/A"
+    assert pd.isna(result.loc[0, "required_mem_mb"])
     assert pd.isna(result.loc[0, "suggested_mem_mb"])
 
 

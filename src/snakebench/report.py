@@ -56,6 +56,7 @@ def build_markdown_report(
         "p90_runtime_sec",
         "suggested_runtime",
         "p95_memory_mb",
+        "required_mem_mb",
         "suggested_mem_mb",
         "confidence",
     ]
@@ -93,7 +94,9 @@ def build_markdown_report(
 
 ## Resource Suggestions
 
-Suggestions use `ceil(p90_runtime * 1.5)` and `ceil(p95_memory * 1.25 / 256) * 256`.
+Runtime suggestion uses `ceil(p90_runtime * 1.5)`. Memory requirement uses p95(max_rss_mb) × 1.25. The displayed suggested_mem_mb is rounded up to the nearest 256 MB for scheduler-friendly resource declarations.
+
+Audit memory status is based on required_mem_mb, not the rounded suggested_mem_mb.
 
 {_format_markdown_table(suggestions_display)}
 """
@@ -107,6 +110,7 @@ Suggestions use `ceil(p90_runtime * 1.5)` and `ceil(p95_memory * 1.25 / 256) * 2
             "p90_runtime_sec",
             "suggested_runtime",
             "p95_memory_mb",
+            "required_mem_mb",
             "suggested_mem_mb",
             "confidence",
         ]
@@ -136,7 +140,7 @@ Suggestions use `ceil(p90_runtime * 1.5)` and `ceil(p95_memory * 1.25 / 256) * 2
 
 ---
 
-**Version:** Snakebench Advisor v0.4.0
+**Version:** Snakebench Advisor v0.4.1
 **Status:** Prototype
 """
 
