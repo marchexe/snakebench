@@ -1,6 +1,6 @@
 # Snakebench Advisor Report
 
-**Generated:** 2026-07-10 18:50:55 UTC
+**Generated:** 2026-07-10 20:31:42 UTC
 
 ## Summary
 
@@ -73,5 +73,5 @@ Audit memory status is based on required_mem_mb, not the rounded suggested_mem_m
 
 ---
 
-**Version:** Snakebench Advisor v0.4.1
+**Version:** Snakebench Advisor v0.5.1
 **Status:** Prototype

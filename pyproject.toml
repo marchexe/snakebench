@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snakebench-advisor"
-version = "0.4.1"
+version = "0.5.1"
 description = "Telemetry-driven Snakemake resource advisor using PSB-style benchmarks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,8 +29,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+charts = [
+    "matplotlib",
+]
 dev = [
     "pytest",
+    "matplotlib",
 ]
 
 [project.scripts]

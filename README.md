@@ -34,6 +34,10 @@ Upstream references:
 - `snakebench report data/ --out reports/example_report.md` - write a telemetry report.
 - `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/` - audit Snakefile resources.
 - `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out reports/audit_report.md` - write an audit report.
+- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --csv reports/audit_table.csv` - write the audit table.
+- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --charts reports/audit_charts` - write audit charts.
+
+Chart export requires `pip install .[charts]`.
 
 ## Demo
 
@@ -80,7 +84,11 @@ reports/
   example_report.md
   readiness_report.md
   audit_report.md
+  audit_table.csv
+  audit_charts/
 ```
+
+`reports/` contains generated example outputs.
 
 ## Installation
 

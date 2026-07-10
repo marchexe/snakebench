@@ -10,7 +10,9 @@ from .summarize import summarize_by_tool
 from .advise import suggest_resources, suggest_resources_stratified
 from .report import build_markdown_report
 from .readiness import build_readiness_markdown, inspect_dataset
-from .audit import audit_rules, build_audit_markdown, parse_snakefile
+from .audit import audit_rules
+from .audit_export import build_audit_markdown, write_audit_csv
+from .snakefile import parse_snakefile
 
 
 def cmd_summarize(args):
@@ -184,6 +186,15 @@ def cmd_audit(args):
                 f.write(build_audit_markdown(audit))
             print(f"Audit report written to {output_path}")
 
+        if args.csv:
+            write_audit_csv(audit, args.csv)
+            print(f"Audit CSV written to {Path(args.csv)}")
+
+        if args.charts:
+            from .charts import write_audit_charts
+            write_audit_charts(audit, args.charts)
+            print(f"Audit charts written to {Path(args.charts)}")
+
     except Exception as e:
         print(f"Error: {e}", flush=True)
         exit(1)
@@ -276,6 +287,16 @@ def main():
         "--out",
         default=None,
         help="Optional output markdown file path",
+    )
+    audit_parser.add_argument(
+        "--csv",
+        default=None,
+        help="Optional output CSV file path",
+    )
+    audit_parser.add_argument(
+        "--charts",
+        default=None,
+        help="Optional output directory for PNG charts",
     )
     audit_parser.set_defaults(func=cmd_audit)
 

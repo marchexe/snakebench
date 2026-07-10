@@ -3,7 +3,7 @@
 Audit mode is the bridge between PSB-normalized telemetry and actual
 Snakemake resource declarations. It compares declared resources in a Snakefile
 against observed telemetry summaries and Snakebench's existing heuristic
-suggestions.
+requirements and suggestions.
 
 ## What Audit Mode Does
 
@@ -13,14 +13,16 @@ For each parsed rule it tries to answer:
 - Does this rule have matching telemetry?
 - Does the rule declare memory?
 - Does the rule declare runtime?
-- Are declared resources lower than Snakebench's telemetry-based suggestions?
-- Are declared resources much higher than Snakebench's suggestions?
+- Are declared resources lower than Snakebench's telemetry-based requirements?
+- Are declared resources much higher than Snakebench's telemetry-based requirements?
 
 The intended command shape is:
 
 ```bash
 snakebench audit Snakefile --telemetry data/
 snakebench audit Snakefile --telemetry data/ --out reports/audit_report.md
+snakebench audit Snakefile --telemetry data/ --csv reports/audit_table.csv
+snakebench audit Snakefile --telemetry data/ --charts reports/audit_charts
 ```
 
 The telemetry path is loaded through the normal Snakebench parquet loader, so
@@ -86,13 +88,17 @@ Audit rows can report one or more semicolon-separated statuses:
 - `insufficient_data`: fewer than 3 telemetry observations matched.
 - `missing_mem`: the rule has no parsed memory declaration.
 - `missing_runtime`: the rule has no parsed runtime declaration.
-- `underrequested_mem`: suggested memory is more than 10% above declared memory.
+- `underrequested_mem`: required memory is more than 10% above declared memory.
 - `underrequested_runtime`: suggested runtime is more than 10% above declared runtime.
-- `overrequested_mem`: declared memory is more than 2x suggested memory.
+- `overrequested_mem`: declared memory is much higher than required memory.
 - `overrequested_runtime`: declared runtime is more than 2x suggested runtime.
 - `ok`: telemetry exists and no configured issue was detected.
 
 Statuses are heuristic signals, not hard scheduling truth.
+
+Memory status uses `required_mem_mb = p95(max_rss_mb) × 1.25`.
+`suggested_mem_mb` is rounded up to the nearest 256 MB for scheduler-friendly
+resource declarations.
 
 ## Limitations
 

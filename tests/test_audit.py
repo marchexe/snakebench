@@ -1,79 +1,21 @@
-"""Tests for minimal Snakefile audit mode."""
+"""Tests for Snakefile resource audit core behavior."""
 
 import pandas as pd
 
 from snakebench.audit import (
     audit_rules,
+    build_audit_metrics,
     build_audit_markdown,
     parse_snakefile,
+    write_audit_csv,
 )
 
 
-SNAKEFILE_TEXT = """
-rule sort_bam:
-    threads: 4
-    benchmark:
-        "benchmarks/sort_bam.tsv"
-    resources:
-        mem_mb=2000,
-        runtime="00:30:00"
-    params:
-        _psb_tool="samtools",
-        _psb_primary_cmd="sort",
-
-rule gzip_reads:
-    threads: 1
-    resources:
-        mem_mb=128,
-        runtime="00:00:05"
-    params:
-        _psb_tool="gzip",
-"""
-
-
-def test_parse_snakefile_finds_rule_names(tmp_path):
-    snakefile = tmp_path / "Snakefile"
-    snakefile.write_text(SNAKEFILE_TEXT, encoding="utf-8")
-
-    rules = parse_snakefile(snakefile)
-
-    assert [rule["rule_name"] for rule in rules] == ["sort_bam", "gzip_reads"]
-
-
-def test_parse_snakefile_extracts_threads(tmp_path):
-    snakefile = tmp_path / "Snakefile"
-    snakefile.write_text(SNAKEFILE_TEXT, encoding="utf-8")
-
-    rules = parse_snakefile(snakefile)
-
-    assert rules[0]["threads"] == 4
-
-
-def test_parse_snakefile_extracts_resources_mem_mb(tmp_path):
-    snakefile = tmp_path / "Snakefile"
-    snakefile.write_text(SNAKEFILE_TEXT, encoding="utf-8")
-
-    rules = parse_snakefile(snakefile)
-
-    assert rules[0]["mem_mb"] == 2000
-
-
-def test_parse_snakefile_extracts_runtime(tmp_path):
-    snakefile = tmp_path / "Snakefile"
-    snakefile.write_text(SNAKEFILE_TEXT, encoding="utf-8")
-
-    rules = parse_snakefile(snakefile)
-
-    assert rules[0]["runtime"] == "00:30:00"
-
-
-def test_parse_snakefile_extracts_psb_tool(tmp_path):
-    snakefile = tmp_path / "Snakefile"
-    snakefile.write_text(SNAKEFILE_TEXT, encoding="utf-8")
-
-    rules = parse_snakefile(snakefile)
-
-    assert rules[0]["psb_tool"] == "samtools"
+def test_audit_compatibility_imports_remain_available():
+    assert parse_snakefile is not None
+    assert build_audit_metrics is not None
+    assert build_audit_markdown is not None
+    assert write_audit_csv is not None
 
 
 def test_audit_rules_matches_rule_by_psb_tool():
@@ -170,7 +112,7 @@ def test_audit_rules_detects_actually_underrequested_mem():
     assert "underrequested_mem" in result.loc[0, "status"]
 
 
-def test_audit_rules_includes_required_mem_column():
+def test_audit_rules_includes_enriched_numeric_columns():
     rules = [{"rule_name": "sort_bam", "psb_tool": "samtools", "mem_mb": 1024, "runtime": "00:10:00"}]
     telemetry = pd.DataFrame(
         {
@@ -182,32 +124,30 @@ def test_audit_rules_includes_required_mem_column():
 
     result = audit_rules(rules, telemetry)
 
-    assert "required_mem_mb" in result.columns
+    for column in [
+        "required_mem_mb",
+        "declared_runtime_sec",
+        "required_runtime_sec",
+        "memory_gap_mb",
+        "runtime_gap_sec",
+        "memory_ratio",
+        "runtime_ratio",
+    ]:
+        assert column in result.columns
 
 
-def test_build_audit_markdown_contains_key_sections():
-    audit_df = pd.DataFrame(
+def test_audit_rules_memory_gap_and_ratio():
+    rules = [{"rule_name": "summarize_table", "psb_tool": "awk", "mem_mb": 64, "runtime": "00:10:00"}]
+    telemetry = pd.DataFrame(
         {
-            "rule_name": ["sort_bam"],
-            "match_type": ["psb_tool"],
-            "match_key": ["samtools"],
-            "observations": [3],
-            "declared_mem_mb": [128],
-            "declared_runtime": ["00:10:00"],
-            "observed_p95_memory_mb": [800],
-            "required_mem_mb": [1000],
-            "observed_p90_runtime_sec": [30],
-            "suggested_mem_mb": [1024],
-            "suggested_runtime": ["00:00:45"],
-            "status": ["underrequested_mem"],
-            "reason": ["Suggested memory is more than 10% above declared mem_mb."],
+            "tool": ["awk", "awk", "awk"],
+            "runtime_sec": [1.0, 1.0, 1.0],
+            "max_rss_mb": [8.0, 8.0, 8.0],
         }
     )
 
-    markdown = build_audit_markdown(audit_df)
+    result = audit_rules(rules, telemetry)
 
-    assert "Snakebench Audit Report" in markdown
-    assert "Rule audit table" in markdown
-    assert "Missing resources" in markdown
-    assert "Underrequested resources" in markdown
-    assert "Unmatched rules" in markdown
+    assert result.loc[0, "required_mem_mb"] == 10.0
+    assert result.loc[0, "memory_gap_mb"] == 54.0
+    assert result.loc[0, "memory_ratio"] == 6.4
