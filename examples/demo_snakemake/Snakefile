@@ -1,0 +1,73 @@
+rule align_reads:
+    threads: 4
+    benchmark:
+        "benchmarks/align_reads.tsv"
+    resources:
+        mem_mb=512,
+        runtime="00:00:20"
+    params:
+        _psb_tool="bwa-mem2",
+        _psb_primary_cmd="bwa-mem2 mem",
+        _psb_category="alignment"
+    shell:
+        "bwa-mem2 mem -t {threads} ref.fa reads.fq > aligned.sam"
+
+
+rule sort_bam:
+    threads: 4
+    benchmark:
+        "benchmarks/sort_bam.tsv"
+    resources:
+        mem_mb=256,
+        runtime="00:00:01"
+    params:
+        _psb_tool="samtools",
+        _psb_primary_cmd="samtools sort",
+        _psb_category="alignment"
+    shell:
+        "samtools sort -@ {threads} aligned.sam -o sorted.bam"
+
+
+rule compress_fastq:
+    threads: 1
+    benchmark:
+        "benchmarks/compress_fastq.tsv"
+    resources:
+        mem_mb=256,
+        runtime="00:00:30"
+    params:
+        _psb_tool="gzip",
+        _psb_primary_cmd="gzip",
+        _psb_category="compression"
+    shell:
+        "gzip -c reads.fq > reads.fq.gz"
+
+
+rule simulate_reads:
+    threads: 1
+    benchmark:
+        "benchmarks/simulate_reads.tsv"
+    resources:
+        mem_mb=128,
+        runtime="00:00:03"
+    params:
+        _psb_tool="wgsim",
+        _psb_primary_cmd="wgsim",
+        _psb_category="simulation"
+    shell:
+        "wgsim ref.fa reads_1.fq reads_2.fq"
+
+
+rule summarize_table:
+    threads: 1
+    benchmark:
+        "benchmarks/summarize_table.tsv"
+    resources:
+        mem_mb=64,
+        runtime="00:00:01"
+    params:
+        _psb_tool="awk",
+        _psb_primary_cmd="awk",
+        _psb_category="summary"
+    shell:
+        "awk '{print $1}' table.tsv > summary.tsv"

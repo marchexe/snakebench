@@ -1,4 +1,4 @@
-"""Generate confidence-aware resource suggestions."""
+"""Generate resource suggestions."""
 
 import pandas as pd
 import numpy as np

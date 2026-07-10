@@ -1,154 +1,121 @@
 # Snakebench Advisor
 
-A local-first, presentable v0.2.1 prototype for turning Snakemake / PSB-style benchmark telemetry into resource usage reports and confidence-aware Snakemake resource suggestions.
+CLI tool for analyzing PSB-style Snakemake benchmark telemetry and auditing declared Snakemake resources against observed runtime and memory usage.
 
-Snakebench Advisor explores a simple path:
+## Scope
 
-```text
-telemetry -> resource report -> advisor -> future prediction
+- Reads local PSB-style parquet telemetry.
+- Normalizes PSB fields: `input_size`, `output_size`, `resources`, environment metadata.
+- Summarizes runtime and memory by tool.
+- Derives percentile-based resource suggestions.
+- Audits simple static Snakefile resource declarations.
+- Does not collect telemetry.
+
+## Upstream Alignment
+
+- PSB defines the telemetry schema, export format, and server.
+- `snakemake-logger-plugin-benchmark-telemetry` collects benchmark telemetry from Snakemake.
+- Snakebench consumes exported PSB-style telemetry locally.
+- Snakebench should keep PSB field names and units.
+- See [docs/psb_upstream_mapping.md](docs/psb_upstream_mapping.md).
+
+Upstream references:
+
+- <https://github.com/btraven00/psb/blob/main/docs/spec.md>
+- <https://github.com/btraven00/psb/blob/main/docs/roadmap.md>
+- <https://github.com/btraven00/snakemake-logger-plugin-benchmark-telemetry>
+
+## Commands
+
+- `snakebench summarize data/` - summarize runtime and memory by `tool`.
+- `snakebench advise data/` - generate tool-level resource suggestions.
+- `snakebench advise data/ --stratify input-size` - group suggestions by input-size bin.
+- `snakebench dry data/` - check dataset readiness and PSB compatibility.
+- `snakebench report data/ --out reports/example_report.md` - write a telemetry report.
+- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/` - audit Snakefile resources.
+- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out reports/audit_report.md` - write an audit report.
+
+## Demo
+
+`examples/demo_snakemake/` contains an audit demo Snakefile for `samtools`, `bwa-mem2`, `gzip`, `awk`, and `wgsim`.
+
+This is an audit demo Snakefile, not a complete executable workflow.
+
+Matching uses PSB annotations:
+
+- `_psb_tool` -> telemetry `tool`
+- `_psb_primary_cmd` -> telemetry `command`
+
+Run:
+
+```bash
+snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out examples/demo_snakemake/expected_audit_report.md
 ```
 
-It is intentionally lightweight. The current version uses robust descriptive statistics, optional input-size stratification, and dataset readiness checks. It is not an ML model yet.
+## Layout
 
-## Current dataset
+```text
+src/snakebench/
+  psb.py          # PSB normalization
+  load.py         # parquet loading
+  summarize.py    # tool summaries
+  advise.py       # resource suggestions
+  readiness.py    # readiness checks
+  audit.py        # Snakefile resource audit
+  report.py       # markdown reports
+  cli.py          # CLI entry point
 
-This repository includes Week 11, 2026 telemetry from five bioinformatics tools:
+docs/
+  psb_upstream_mapping.md
+  audit_mode_design.md
+  integration_notes.md
 
-- `awk-2026-W11.parquet`
-- `bwa-mem2-2026-W11.parquet`
-- `gzip-2026-W11.parquet`
-- `samtools-2026-W11.parquet`
-- `wgsim-2026-W11.parquet`
+examples/demo_snakemake/
+  README.md
+  Snakefile
+  config.yaml
+  expected_audit_report.md
 
-The dataset has about 205 observations. That is enough to demonstrate the local telemetry pipeline and generate cautious heuristic advice, but it is too small and incomplete for reliable ML prediction.
-
-## Relationship to PSB
-
-PSB (Parsl Scalability Benchmark) provides the telemetry protocol, collector/server, and Snakemake logger plugin that define the upstream field names and semantics. Snakebench Advisor consumes PSB-style telemetry locally and turns it into summaries, readiness checks, and cautious resource suggestions.
-
-Snakebench does not replace PSB. It is a local analysis layer for PSB-style parquet exports and similar telemetry files. Where possible, Snakebench follows PSB field names and units directly.
-
-## PSB compatibility
-
-Snakebench v0.2.1 recognizes canonical PSB parquet/export fields:
-
-- `input_size` and `output_size` are byte counts in PSB parquet exports.
-- Snakebench derives `input_size_mb` and `output_size_mb` for local analysis.
-- `resources` is treated as the upstream declared-resource carrier.
-- Simple JSON resources such as `{"_cores": 4, "mem_mb": 8000}` are parsed into `declared_cores` and `declared_mem_mb`.
-- PSB environment fields such as `host_hash`, `cpu_model`, `cpu_features`, `cpu_cores`, `kernel_version`, `kernel_string`, `sm_version`, and `deploy_mode` are recognized by readiness checks.
-
-Current limitations:
-
-- `resources` may be present but empty in exported data.
-- Snakebench does not parse full `inputs` / `outputs` file-entry JSON yet.
-- Snakebench does not parse Snakefiles or audit declared rule resources yet.
-- Prediction and ML remain future work and require more data and evaluation.
+reports/
+  example_report.md
+  readiness_report.md
+  audit_report.md
+```
 
 ## Installation
-
-Use one local virtual environment named `.venv`:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+python -m pytest tests/ -v
 ```
 
-On Windows PowerShell:
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-```
-
-Runtime dependencies are intentionally minimal:
-
-- pandas
-- pyarrow
-- tabulate
-
-## Usage
-
-Summarize telemetry by tool:
-
-```bash
-snakebench summarize data/
-```
-
-Generate tool-level resource suggestions:
-
-```bash
-snakebench advise data/
-```
-
-Generate input-size-aware suggestions when input size metadata is available:
-
-```bash
-snakebench advise data/ --stratify input-size
-```
-
-Generate a markdown report:
-
-```bash
-snakebench report data/ --out reports/example_report.md
-```
-
-## Dataset readiness / dry mode
-
-Dry mode does not run workflows. It audits the telemetry dataset and checks whether the available metadata is enough for:
-
-- tool-level advisor
-- input-size advisor
-- future ML prediction
-- workflow resource audit
-
-This is useful because small telemetry datasets can support summaries and cautious advice, but not reliable ML prediction. PSB input-size fields are recognized when present; rows with missing input-size values may still fall back to `unknown`.
-
-```bash
-snakebench dry data/
-```
-
-```bash
-snakebench readiness data/ --out reports/readiness_report.md
-```
-
-The readiness report calls out missing metadata and recommends the next fields to collect, including input size, rule name, declared resources, workflow version, failed/OOM jobs, and environment ID.
-
-## Reports
-
-Example generated reports live in `reports/`:
-
-- [reports/example_report.md](reports/example_report.md)
-- [reports/readiness_report.md](reports/readiness_report.md)
-
-## What v0.2.1 does
-
-- Loads local parquet telemetry.
-- Normalizes canonical PSB fields such as `input_size`, `output_size`, `resources`, and environment metadata.
-- Summarizes runtime and memory by tool.
-- Generates heuristic Snakemake resource suggestions.
-- Supports optional input-size stratification with `--stratify input-size`.
-- Generates markdown reports.
-- Adds dataset readiness/dry mode for honest analysis gating.
-
-## Limitations
-
-- The current advisor uses robust statistics, not learned prediction.
-- The included dataset is small.
-- Some metadata needed for input-size-aware advice, environment comparison, workflow resource auditing, and ML prediction may be missing.
-- Suggestions are starting points and should be checked against your own workflow and cluster behavior.
-
-## Tests
-
-```bash
 python -m pytest tests/ -v
 ```
 
-## Roadmap
+Dependencies are `pandas`, `pyarrow`, and `tabulate`. Test dependency is `pytest`.
 
-- Collect more telemetry across workflows, environments, input sizes, tool versions, and failures.
-- Compare declared Snakemake resources against observed runtime and memory.
-- Add feature engineering for input size and environment metadata.
-- Use larger datasets to explore future runtime and memory prediction.
+## Limitations
+
+- Simple static Snakefile parser.
+- Best-effort rule matching.
+- Percentile heuristics, not ML.
+- No telemetry collection.
+- No backend or dashboard.
+- Demo data is small.
+- Plugin currently may emit less metadata than the PSB spec supports.
+
+## Next Integration Work
+
+- Improve plugin output: `rule_name`, `resources`, `inputs`/`outputs`, `tool_version`, `category`.
+- Improve rule matching.
+- Make the demo workflow fully runnable.
+- Add a rule mapping file for unmatched rules.
+- Evaluate prediction later, after enough data and baselines exist.

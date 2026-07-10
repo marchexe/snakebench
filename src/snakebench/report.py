@@ -1,8 +1,32 @@
 """Generate markdown reports from telemetry data."""
 
-import pandas as pd
 from datetime import datetime
 from typing import Optional
+
+import pandas as pd
+
+
+def _format_markdown_table(df: pd.DataFrame) -> str:
+    if len(df) == 0:
+        return "- None.\n"
+
+    lines = []
+    lines.append("| " + " | ".join(df.columns) + " |")
+    lines.append("| " + " | ".join(["---"] * len(df.columns)) + " |")
+
+    for _, row in df.iterrows():
+        values = []
+        for column in df.columns:
+            value = row[column]
+            if isinstance(value, float):
+                values.append("N/A" if pd.isna(value) else f"{value:.2f}")
+            elif pd.isna(value):
+                values.append("N/A")
+            else:
+                values.append(str(value))
+        lines.append("| " + " | ".join(values) + " |")
+
+    return "\n".join(lines) + "\n"
 
 
 def build_markdown_report(
@@ -12,108 +36,73 @@ def build_markdown_report(
     stratified_suggestions_df: Optional[pd.DataFrame] = None,
     psb_report: Optional[dict] = None,
 ) -> str:
-    """
-    Build a markdown report from telemetry summaries and suggestions.
-
-    Parameters
-    ----------
-    summary_df : pd.DataFrame
-        Output from summarize_by_tool().
-    suggestions_df : pd.DataFrame
-        Output from suggest_resources().
-    dataset_size : int
-        Total number of observations in the raw dataset.
-    stratified_suggestions_df : pd.DataFrame, optional
-        Output from suggest_resources_stratified() for input-size-aware suggestions.
-    psb_report : dict, optional
-        Output from inspect_dataset() with PSB compatibility facts.
-
-    Returns
-    -------
-    str
-        Markdown-formatted report.
-    """
+    """Build a markdown report from telemetry summaries and suggestions."""
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     num_tools = len(summary_df)
 
-    report = f"""# Snakebench Advisor Report
-
-**Generated:** {timestamp}
-
-## Executive Summary
-
-This report presents telemetry-driven resource usage summaries and confidence-aware Snakemake resource suggestions.
-**Important: This is not a machine learning model.** The current version uses robust statistics (medians, percentiles) 
-to characterize tool behavior from a small dataset.
-
-## Dataset Overview
-
-- **Total observations:** {dataset_size}
-- **Tools analyzed:** {num_tools}
-- **Data collection period:** PSB Week 11, 2026
-
-### Dataset Characteristics
-
-This dataset represents execution telemetry collected from a specific bioinformatics workflow.
-The observations come from multiple runs of tools like AWK, BWA-MEM2, gzip, samtools, and wgsim.
-
-"""
-
-    if psb_report:
-        report += f"""### PSB Compatibility
-
-- **PSB-like records:** {psb_report["psb_like_records"]} ({psb_report["psb_like_fraction"]:.1%})
-- **Input size recognized:** {"yes" if psb_report["has_input_size"] else "no"}
-- **PSB input size fields recognized:** {"yes" if psb_report["has_psb_input_size"] else "no"}
-- **Resources recognized:** {"yes" if psb_report["has_declared_resources"] else "no"}
-- **PSB resources field recognized:** {"yes" if psb_report["has_psb_resources"] else "no"}
-- **Environment metadata recognized:** {"yes" if psb_report["has_environment_metadata"] else "no"}
-
-Snakebench consumes PSB-style telemetry locally and follows PSB field names and units where possible.
-In PSB parquet exports, `input_size` and `output_size` are byte counts; Snakebench derives MB-scale columns for local analysis.
-
-"""
-
-    report += """
-## Tool Summary
-
-The following table shows the distribution of observations and basic runtime/memory statistics for each tool:
-
-"""
-
-    # Format summary table
     summary_display = summary_df.copy()
-    for col in [
+    for column in [
         "median_runtime_sec",
         "p90_runtime_sec",
         "median_memory_mb",
         "p95_memory_mb",
     ]:
-        if col in summary_display.columns:
-            summary_display[col] = summary_display[col].round(2)
+        if column in summary_display.columns:
+            summary_display[column] = summary_display[column].round(2)
 
-    report += "| " + " | ".join(summary_display.columns) + " |\n"
-    report += "| " + " | ".join(["---"] * len(summary_display.columns)) + " |\n"
-
-    for _, row in summary_display.iterrows():
-        values = []
-        for col in summary_display.columns:
-            val = row[col]
-            if isinstance(val, float):
-                values.append(f"{val:.2f}")
-            elif isinstance(val, int):
-                values.append(str(val))
-            else:
-                values.append(str(val) if pd.notna(val) else "N/A")
-        report += "| " + " | ".join(values) + " |\n"
-
-    report += "\n## Resource Suggestions\n\n"
-    report += "Based on the observed data, the following resource allocations are recommended for Snakemake rules:\n\n"
-
-    # Format suggestions table
+    suggestion_columns = [
+        "tool",
+        "observations",
+        "p90_runtime_sec",
+        "suggested_runtime",
+        "p95_memory_mb",
+        "suggested_mem_mb",
+        "confidence",
+    ]
     suggestions_display = suggestions_df[
-        [
+        [column for column in suggestion_columns if column in suggestions_df.columns]
+    ].copy()
+
+    report = f"""# Snakebench Advisor Report
+
+**Generated:** {timestamp}
+
+## Summary
+
+- **Total observations:** {dataset_size}
+- **Tools analyzed:** {num_tools}
+- **Data collection period:** PSB Week 11, 2026
+- **Method:** medians, percentiles, and fixed safety margins
+- **ML model:** no
+
+"""
+
+    if psb_report:
+        report += f"""## PSB Compatibility
+
+- **PSB-like records:** {psb_report["psb_like_records"]} ({psb_report["psb_like_fraction"]:.1%})
+- **Input size recognized:** {"yes" if psb_report["has_input_size"] else "no"}
+- **Resources recognized:** {"yes" if psb_report["has_declared_resources"] else "no"}
+- **Environment metadata recognized:** {"yes" if psb_report["has_environment_metadata"] else "no"}
+
+"""
+
+    report += f"""## Tool Summary
+
+{_format_markdown_table(summary_display)}
+
+## Resource Suggestions
+
+Suggestions use `ceil(p90_runtime * 1.5)` and `ceil(p95_memory * 1.25 / 256) * 256`.
+
+{_format_markdown_table(suggestions_display)}
+"""
+
+    if stratified_suggestions_df is not None and len(stratified_suggestions_df) > 0:
+        strat_columns = [
             "tool",
+            "input_size_bin",
+            "threads",
             "observations",
             "p90_runtime_sec",
             "suggested_runtime",
@@ -121,155 +110,34 @@ The following table shows the distribution of observations and basic runtime/mem
             "suggested_mem_mb",
             "confidence",
         ]
-    ].copy()
+        strat_display = stratified_suggestions_df[
+            [column for column in strat_columns if column in stratified_suggestions_df.columns]
+        ].copy()
 
-    report += "| " + " | ".join(suggestions_display.columns) + " |\n"
-    report += "| " + " | ".join(["---"] * len(suggestions_display.columns)) + " |\n"
+        report += f"""
+## Input-Size Stratified Suggestions
 
-    for _, row in suggestions_display.iterrows():
-        values = []
-        for col in suggestions_display.columns:
-            val = row[col]
-            if isinstance(val, float) and col in [
-                "p90_runtime_sec",
-                "p95_memory_mb",
-            ]:
-                values.append(f"{val:.2f}")
-            elif isinstance(val, float):
-                values.append(f"{val:.2f}")
-            elif isinstance(val, int):
-                values.append(str(val))
-            else:
-                values.append(str(val) if pd.notna(val) else "N/A")
-        report += "| " + " | ".join(values) + " |\n"
-
-    report += f"""
-### Interpreting Suggestions
-
-- **suggested_runtime:** Compute `ceil(p90_runtime * 1.5)` to provide a safety margin above the 90th percentile.
-  Use in Snakemake as `time=` parameter (e.g., `time=suggested_runtime`).
-- **suggested_mem_mb:** Compute `ceil(p95_memory * 1.25 / 256) * 256` to round up to nearest 256 MB and include safety margin.
-  Use in Snakemake as `mem_mb=` parameter.
-- **confidence:** Reflects data quality and size:
-  - **low:** < 10 observations. Use as a rough guide only.
-  - **medium:** 10-50 observations. Use with caution.
-  - **high:** >= 50 observations. More reliable, but still not a learned model.
-"""
-
-    # Add stratified suggestions section if available
-    if stratified_suggestions_df is not None and len(stratified_suggestions_df) > 0:
-        report += """
-## Input-size-aware Suggestions
-
-The following table provides resource suggestions stratified by input size.
-This is more realistic than tool-only aggregates, since resource usage often scales with input size.
-However, these are still heuristic suggestions based on robust statistics, not learned predictions.
-
-"""
-        # Format stratified suggestions table
-        strat_display = stratified_suggestions_df[[
-            col for col in [
-                "tool",
-                "input_size_bin",
-                "threads",
-                "observations",
-                "p90_runtime_sec",
-                "suggested_runtime",
-                "p95_memory_mb",
-                "suggested_mem_mb",
-                "confidence",
-            ]
-            if col in stratified_suggestions_df.columns
-        ]].copy()
-
-        report += "| " + " | ".join(strat_display.columns) + " |\n"
-        report += "| " + " | ".join(["---"] * len(strat_display.columns)) + " |\n"
-
-        for _, row in strat_display.iterrows():
-            values = []
-            for col in strat_display.columns:
-                val = row[col]
-                if isinstance(val, float) and col in [
-                    "p90_runtime_sec",
-                    "p95_memory_mb",
-                ]:
-                    values.append(f"{val:.2f}")
-                elif isinstance(val, float):
-                    values.append(f"{val:.2f}")
-                elif isinstance(val, int):
-                    values.append(str(val))
-                else:
-                    values.append(str(val) if pd.notna(val) else "N/A")
-            report += "| " + " | ".join(values) + " |\n"
-
-        report += """
-### Notes on Stratified Suggestions
-
-- Stratified suggestions depend on the presence of input size metadata in the telemetry.
-- If input size is unknown for some observations, they appear under `input_size_bin = unknown`.
-- This stratification is still heuristic: it groups by observed ranges, not learned from input-size features.
+{_format_markdown_table(strat_display)}
 """
 
     report += f"""
-
 ## Limitations
 
-This report has explicit limitations that you should understand before using these suggestions:
+- Suggestions are percentile heuristics.
+- Results depend on the observed workflow, input distribution, and environment.
+- Current dataset size: {dataset_size} observations.
+- No telemetry collection is performed by Snakebench.
 
-### 1. Not a Machine Learning Model
-- The current pipeline uses **robust descriptive statistics** only (medians, percentiles).
-- There is **no learned prediction function**. We do not predict runtime/memory based on input features.
-- We are not training a model on this data; we are only characterizing the observed distribution.
+## Next Steps
 
-### 2. Small Dataset
-- The current dataset contains only **{dataset_size} total observations**, distributed across {num_tools} tools.
-- Many tools have fewer than 50 observations, which limits statistical reliability.
-- A statistically robust ML model typically requires hundreds or thousands of observations.
-
-### 3. Single Environment & Workflow
-- This data comes from a **single execution environment** (week 11, 2026).
-- Different hardware, OS versions, and input distributions may produce different results.
-- Generalization to other environments is uncertain.
-
-### 4. Robust Statistics != Prediction
-- Medians and percentiles describe **past observations**, not future performance.
-- High variability within a tool's execution profile may not be captured by these summaries.
-- Unknown input sizes or edge cases are not forecasted.
-
-### 5. Suggestions Are Heuristic
-- The 1.25x and 1.5x multipliers are heuristic choices, not empirically validated.
-- They are reasonable starting points but should be validated in your environment.
-
-## Suggested Next Steps
-
-To move toward a future predictive resource advisor:
-
-1. **Collect more observations:** Expand the dataset to hundreds or thousands of observations across diverse environments and input sizes.
-2. **Stratify data:** Collect telemetry tagged by input size, environment, and other relevant features.
-3. **Feature engineering:** Identify which input/environment features most strongly influence runtime and memory.
-4. **Train an ML model:** With sufficient data and features, build a regression or quantile model to predict runtime/memory.
-5. **Validate predictions:** Test suggestions on held-out data and real workflows.
-6. **Connect to PSB:** Integrate with the broader Parsl Scalability Benchmark to share telemetry and models.
-
-## Relationship to PSB (Parsl Scalability Benchmark)
-
-PSB provides:
-- The telemetry schema (columns, units, collection patterns).
-- A reference implementation for collecting standardized benchmark data.
-- A repository of publicly available benchmark results.
-
-Snakebench Advisor explores the next step in this pipeline:
-- Ingesting PSB-style telemetry.
-- Summarizing it for local use.
-- Providing immediate, confidence-aware suggestions.
-- Laying the foundation for future ML-based resource prediction.
+- Keep field names and units aligned with PSB.
+- Improve plugin metadata for `rule_name`, `resources`, inputs/outputs, tool versions, and categories.
+- Validate suggestions on held-out workflow runs before evaluating prediction.
 
 ---
 
-**Version:** Snakebench Advisor v0.2.1  
-**Status:** Prototype  
-**Audience:** Early adopters, researchers, Snakemake users exploring telemetry-driven resource allocation.
+**Version:** Snakebench Advisor v0.4.0
+**Status:** Prototype
 """
 
     return report
-

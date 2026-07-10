@@ -10,6 +10,7 @@ from .summarize import summarize_by_tool
 from .advise import suggest_resources, suggest_resources_stratified
 from .report import build_markdown_report
 from .readiness import build_readiness_markdown, inspect_dataset
+from .audit import audit_rules, build_audit_markdown, parse_snakefile
 
 
 def cmd_summarize(args):
@@ -157,6 +158,37 @@ def cmd_readiness(args):
         exit(1)
 
 
+def cmd_audit(args):
+    """Handle 'snakebench audit' command."""
+    try:
+        rules = parse_snakefile(args.snakefile)
+        df = load_parquet_files(args.telemetry)
+        audit = audit_rules(rules, df)
+
+        print("\n=== Snakebench Audit ===\n")
+        print(
+            tabulate(
+                audit,
+                headers="keys",
+                tablefmt="grid",
+                showindex=False,
+                floatfmt=".2f",
+            )
+        )
+        print(f"\nAudited {len(audit)} rules from {args.snakefile}.\n")
+
+        if args.out:
+            output_path = Path(args.out)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(build_audit_markdown(audit))
+            print(f"Audit report written to {output_path}")
+
+    except Exception as e:
+        print(f"Error: {e}", flush=True)
+        exit(1)
+
+
 def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
@@ -225,6 +257,27 @@ def main():
             help="Optional output markdown file path",
         )
         readiness_parser.set_defaults(func=cmd_readiness)
+
+    # audit command
+    audit_parser = subparsers.add_parser(
+        "audit",
+        help="Audit Snakefile declared resources against telemetry",
+    )
+    audit_parser.add_argument(
+        "snakefile",
+        help="Path to Snakefile",
+    )
+    audit_parser.add_argument(
+        "--telemetry",
+        required=True,
+        help="Path to PSB-style telemetry parquet file or directory",
+    )
+    audit_parser.add_argument(
+        "--out",
+        default=None,
+        help="Optional output markdown file path",
+    )
+    audit_parser.set_defaults(func=cmd_audit)
 
     args = parser.parse_args()
 
