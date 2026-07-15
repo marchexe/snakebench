@@ -2,6 +2,9 @@
 
 This directory contains an audit demo Snakefile for Snakebench.
 
+The Snakefile provides declared resources and PSB-style annotations. Telemetry
+for the demo comes from `../../data/`; benchmark TSV files are not required.
+
 It represents rules for tools present in the current telemetry:
 
 - `samtools`

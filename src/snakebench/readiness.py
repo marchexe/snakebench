@@ -5,93 +5,38 @@ from __future__ import annotations
 import pandas as pd
 
 from .psb import is_psb_like_row
-
-RUNTIME_COLUMNS = ["runtime_sec", "runtime_seconds", "seconds", "s", "runtime"]
-MEMORY_COLUMNS = ["max_rss_mb", "max_memory_mb", "memory_mb", "max_rss", "mem_mb"]
-THREAD_COLUMNS = ["threads", "num_threads", "n_threads"]
-INPUT_SIZE_COLUMNS = [
-    "input_size_mb",
-    "input_size",
-    "inputs_size_mb",
-    "total_input_size_mb",
-    "input_bytes",
-    "inputs_bytes",
-    "total_input_bytes",
-    "inputs",
-    "num_inputs",
-    "input_type",
-]
-DECLARED_RESOURCE_COLUMNS = [
-    "declared_mem_mb",
-    "declared_runtime",
-    "declared_cores",
-    "resources",
-]
-FAILURE_COLUMNS = ["status", "exit_code", "failed", "oom", "error_type"]
-ENVIRONMENT_COLUMNS = [
-    "environment_id",
-    "env_id",
-    "host_hash",
-    "hostname_hash",
-    "cpu_model",
-    "cpu_features",
-    "cpu_cores",
-    "l2_cache_kb",
-    "l3_cache_kb",
-    "cpu_freq_mhz",
-    "os",
-    "kernel",
-    "kernel_version",
-    "kernel_string",
-    "platform",
-    "sm_version",
-    "snakemake_version",
-    "deploy_mode",
-]
-TOOL_VERSION_COLUMNS = ["tool_version"]
-PSB_INPUT_SIZE_COLUMNS = ["input_size", "inputs", "num_inputs", "input_type"]
-PSB_RESOURCE_COLUMNS = ["resources"]
-PSB_ENVIRONMENT_COLUMNS = [
-    "host_hash",
-    "cpu_model",
-    "cpu_features",
-    "cpu_cores",
-    "l2_cache_kb",
-    "l3_cache_kb",
-    "cpu_freq_mhz",
-    "os",
-    "kernel_version",
-    "kernel_string",
-    "sm_version",
-    "deploy_mode",
-]
-
-
-def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    for column in candidates:
-        if column in df.columns:
-            return column
-    return None
-
-
-def _find_columns(df: pd.DataFrame, candidates: list[str]) -> list[str]:
-    return [column for column in candidates if column in df.columns]
+from .schema import (
+    DECLARED_RESOURCE_COLUMNS,
+    ENVIRONMENT_COLUMNS,
+    FAILURE_COLUMNS,
+    INPUT_SIZE_COLUMNS,
+    MEMORY_COLUMNS,
+    PSB_ENVIRONMENT_COLUMNS,
+    PSB_INPUT_SIZE_COLUMNS,
+    PSB_RESOURCE_COLUMNS,
+    RUNTIME_COLUMNS,
+    THREAD_COLUMNS,
+    TOOL_COLUMNS,
+    TOOL_VERSION_COLUMNS,
+    find_column,
+    find_columns,
+)
 
 
 def inspect_dataset(df: pd.DataFrame) -> dict:
     """Inspect telemetry columns and return compact readiness facts."""
-    tool_col = _find_column(df, ["tool", "rule", "rule_name"])
-    runtime_col = _find_column(df, RUNTIME_COLUMNS)
-    memory_col = _find_column(df, MEMORY_COLUMNS)
-    threads_col = _find_column(df, THREAD_COLUMNS)
-    input_size_col = _find_column(df, INPUT_SIZE_COLUMNS)
-    tool_version_col = _find_column(df, TOOL_VERSION_COLUMNS)
-    declared_resource_cols = _find_columns(df, DECLARED_RESOURCE_COLUMNS)
-    failure_cols = _find_columns(df, FAILURE_COLUMNS)
-    environment_cols = _find_columns(df, ENVIRONMENT_COLUMNS)
-    psb_input_cols = _find_columns(df, PSB_INPUT_SIZE_COLUMNS)
-    psb_resource_cols = _find_columns(df, PSB_RESOURCE_COLUMNS)
-    psb_environment_cols = _find_columns(df, PSB_ENVIRONMENT_COLUMNS)
+    tool_col = find_column(df, TOOL_COLUMNS)
+    runtime_col = find_column(df, RUNTIME_COLUMNS)
+    memory_col = find_column(df, MEMORY_COLUMNS)
+    threads_col = find_column(df, THREAD_COLUMNS)
+    input_size_col = find_column(df, INPUT_SIZE_COLUMNS)
+    tool_version_col = find_column(df, TOOL_VERSION_COLUMNS)
+    declared_resource_cols = find_columns(df, DECLARED_RESOURCE_COLUMNS)
+    failure_cols = find_columns(df, FAILURE_COLUMNS)
+    environment_cols = find_columns(df, ENVIRONMENT_COLUMNS)
+    psb_input_cols = find_columns(df, PSB_INPUT_SIZE_COLUMNS)
+    psb_resource_cols = find_columns(df, PSB_RESOURCE_COLUMNS)
+    psb_environment_cols = find_columns(df, PSB_ENVIRONMENT_COLUMNS)
 
     if len(df) == 0:
         psb_like_records = 0
@@ -105,7 +50,7 @@ def inspect_dataset(df: pd.DataFrame) -> dict:
     )
 
     unique_environments = None
-    environment_id_col = _find_column(
+    environment_id_col = find_column(
         df,
         ["environment_id", "env_id", "host_hash", "hostname_hash"],
     )

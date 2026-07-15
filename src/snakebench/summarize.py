@@ -3,27 +3,14 @@
 import pandas as pd
 import numpy as np
 
-
-def _find_column(df: pd.DataFrame, candidates: list) -> str:
-    """
-    Find the first column name that exists in the DataFrame.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The data frame to search.
-    candidates : list
-        List of candidate column names to search for.
-
-    Returns
-    -------
-    str or None
-        The first matching column name, or None if no match found.
-    """
-    for col in candidates:
-        if col in df.columns:
-            return col
-    return None
+from .schema import (
+    MEMORY_COLUMNS,
+    RUNTIME_COLUMNS,
+    THREAD_COLUMNS,
+    TOOL_VERSION_COLUMNS,
+    find_column,
+    require_column,
+)
 
 
 def summarize_by_tool(df: pd.DataFrame) -> pd.DataFrame:
@@ -51,34 +38,24 @@ def summarize_by_tool(df: pd.DataFrame) -> pd.DataFrame:
         - max_threads
         - num_tool_versions (if applicable)
     """
-    if "tool" not in df.columns:
-        raise ValueError("DataFrame must contain a 'tool' column")
+    tool_col = require_column(df, ["tool"], "tool")
 
     # Find runtime column
-    runtime_col = _find_column(
-        df,
-        ["runtime_sec", "runtime_seconds", "seconds", "s", "runtime"]
-    )
+    runtime_col = find_column(df, RUNTIME_COLUMNS)
 
     # Find memory column
-    memory_col = _find_column(
-        df,
-        ["max_rss_mb", "max_memory_mb", "memory_mb", "max_rss", "mem_mb"]
-    )
+    memory_col = find_column(df, MEMORY_COLUMNS)
 
     # Find thread column
-    thread_col = _find_column(df, ["threads", "num_threads", "n_threads"])
+    thread_col = find_column(df, THREAD_COLUMNS)
 
     # Find tool version column (optional)
-    version_col = _find_column(
-        df,
-        ["tool_version", "version", "release"]
-    )
+    version_col = find_column(df, TOOL_VERSION_COLUMNS)
 
     summaries = []
 
-    for tool_name in df["tool"].unique():
-        tool_df = df[df["tool"] == tool_name]
+    for tool_name in df[tool_col].unique():
+        tool_df = df[df[tool_col] == tool_name]
 
         summary = {"tool": tool_name, "observations": len(tool_df)}
 

@@ -2,30 +2,10 @@
 
 import pandas as pd
 import numpy as np
-from math import ceil
 from typing import Optional, List
 
-
-def _find_column(df: pd.DataFrame, candidates: list) -> Optional[str]:
-    """
-    Find the first column name that exists in the DataFrame.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The data frame to search.
-    candidates : list
-        List of candidate column names to search for.
-
-    Returns
-    -------
-    str or None
-        The first matching column name, or None if no match found.
-    """
-    for col in candidates:
-        if col in df.columns:
-            return col
-    return None
+from .resources import required_memory_mb, required_runtime_sec, suggested_memory_mb, suggested_runtime_string
+from .schema import MEMORY_COLUMNS, RUNTIME_COLUMNS, find_column
 
 
 def confidence_level(n: int, cv: float = None) -> str:
@@ -75,11 +55,7 @@ def _format_seconds_to_hms(seconds: float) -> str:
     str
         Formatted time string.
     """
-    total_seconds = int(seconds)
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    secs = total_seconds % 60
-    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return suggested_runtime_string(seconds)
 
 
 def suggest_resources(df: pd.DataFrame) -> pd.DataFrame:
@@ -128,18 +104,16 @@ def suggest_resources(df: pd.DataFrame) -> pd.DataFrame:
         p95_memory = row.get("p95_memory_mb", np.nan)
 
         # Calculate suggestions
-        if pd.notna(p90_runtime) and p90_runtime > 0:
-            suggested_runtime_sec = ceil(p90_runtime * 1.5)
-            suggested_runtime_hms = _format_seconds_to_hms(suggested_runtime_sec)
-        else:
+        suggested_runtime_sec = required_runtime_sec(p90_runtime)
+        suggested_runtime_hms = suggested_runtime_string(suggested_runtime_sec)
+        if suggested_runtime_sec is None:
             suggested_runtime_sec = np.nan
-            suggested_runtime_hms = "N/A"
 
-        if pd.notna(p95_memory) and p95_memory > 0:
-            required_mem_mb = p95_memory * 1.25
-            suggested_mem_mb = ceil(required_mem_mb / 256) * 256
-        else:
+        required_mem_mb = required_memory_mb(p95_memory)
+        suggested_mem_mb = suggested_memory_mb(required_mem_mb)
+        if required_mem_mb is None:
             required_mem_mb = np.nan
+        if suggested_mem_mb is None:
             suggested_mem_mb = np.nan
 
         # Calculate coefficient of variation for runtime (if we have variance info)
@@ -230,14 +204,8 @@ def suggest_resources_stratified(
         raise ValueError(f"No valid grouping columns found. Requested: {by}")
 
     # Find runtime and memory columns (same as in suggest_resources)
-    runtime_col = _find_column(
-        df_with_bins,
-        ["runtime_sec", "runtime_seconds", "seconds", "s", "runtime"]
-    )
-    memory_col = _find_column(
-        df_with_bins,
-        ["max_rss_mb", "max_memory_mb", "memory_mb", "max_rss", "mem_mb"]
-    )
+    runtime_col = find_column(df_with_bins, RUNTIME_COLUMNS)
+    memory_col = find_column(df_with_bins, MEMORY_COLUMNS)
 
     suggestions = []
 
@@ -270,18 +238,16 @@ def suggest_resources_stratified(
             p95_memory = np.nan
 
         # Calculate suggestions
-        if pd.notna(p90_runtime) and p90_runtime > 0:
-            suggested_runtime_sec = ceil(p90_runtime * 1.5)
-            suggested_runtime_hms = _format_seconds_to_hms(suggested_runtime_sec)
-        else:
+        suggested_runtime_sec = required_runtime_sec(p90_runtime)
+        suggested_runtime_hms = suggested_runtime_string(suggested_runtime_sec)
+        if suggested_runtime_sec is None:
             suggested_runtime_sec = np.nan
-            suggested_runtime_hms = "N/A"
 
-        if pd.notna(p95_memory) and p95_memory > 0:
-            required_mem_mb = p95_memory * 1.25
-            suggested_mem_mb = ceil(required_mem_mb / 256) * 256
-        else:
+        required_mem_mb = required_memory_mb(p95_memory)
+        suggested_mem_mb = suggested_memory_mb(required_mem_mb)
+        if required_mem_mb is None:
             required_mem_mb = np.nan
+        if suggested_mem_mb is None:
             suggested_mem_mb = np.nan
 
         # Confidence and reason

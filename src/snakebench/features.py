@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 
+from .schema import INPUT_SIZE_BYTE_COLUMNS, INPUT_SIZE_MB_COLUMNS, find_column
+
 
 def detect_input_size_column(df: pd.DataFrame) -> Optional[str]:
     """
@@ -23,25 +25,7 @@ def detect_input_size_column(df: pd.DataFrame) -> Optional[str]:
     str or None
         The name of the input size column, or None if not found.
     """
-    mb_candidates = ["input_size_mb", "inputs_size_mb", "total_input_size_mb"]
-    bytes_candidates = [
-        "input_bytes",
-        "inputs_bytes",
-        "total_input_bytes",
-        "input_size",
-    ]
-
-    # Check MB columns first
-    for col in mb_candidates:
-        if col in df.columns:
-            return col
-
-    # Check bytes columns
-    for col in bytes_candidates:
-        if col in df.columns:
-            return col
-
-    return None
+    return find_column(df, [*INPUT_SIZE_MB_COLUMNS, *INPUT_SIZE_BYTE_COLUMNS])
 
 
 def extract_input_size_mb(df: pd.DataFrame) -> pd.Series:
@@ -66,7 +50,7 @@ def extract_input_size_mb(df: pd.DataFrame) -> pd.Series:
         # No input size data
         return pd.Series(np.nan, index=df.index)
 
-    if col in ["input_size_mb", "inputs_size_mb", "total_input_size_mb"]:
+    if col in INPUT_SIZE_MB_COLUMNS:
         # Already in MB
         return df[col].copy()
     else:

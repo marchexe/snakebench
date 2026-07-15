@@ -140,7 +140,7 @@ Audit memory status is based on required_mem_mb, not the rounded suggested_mem_m
 
 ---
 
-**Version:** Snakebench Advisor v0.5.1
+**Version:** Snakebench Advisor v0.6.0
 **Status:** Prototype
 """
 

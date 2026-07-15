@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from math import ceil
 
 import pandas as pd
 
-from .advise import _format_seconds_to_hms
 from .audit_export import build_audit_markdown, write_audit_csv
 from .audit_metrics import build_audit_metrics
+from .matching import match_rule_to_telemetry
+from .resources import (
+    required_memory_mb,
+    required_runtime_sec,
+    safe_gap,
+    safe_ratio,
+    suggested_memory_mb,
+    suggested_runtime_string,
+)
 from .snakefile import RuleResource, _parse_runtime_seconds, parse_snakefile
 
 
@@ -38,42 +45,15 @@ class AuditRow:
 
 
 def _safe_gap(declared: float | None, required: float | None) -> float | None:
-    if declared is None or required is None:
-        return None
-    if pd.isna(declared) or pd.isna(required):
-        return None
-    return float(declared) - float(required)
+    return safe_gap(declared, required)
 
 
 def _safe_ratio(declared: float | None, required: float | None) -> float | None:
-    if declared is None or required is None:
-        return None
-    if pd.isna(declared) or pd.isna(required) or float(required) == 0:
-        return None
-    return float(declared) / float(required)
+    return safe_ratio(declared, required)
 
 
 def _match_rule(rule: dict, telemetry_df: pd.DataFrame) -> tuple[pd.DataFrame, str, str]:
-    rule_name = rule.get("rule_name")
-    psb_tool = rule.get("psb_tool")
-    psb_primary_cmd = rule.get("psb_primary_cmd")
-
-    if rule_name and "rule_name" in telemetry_df.columns:
-        matched = telemetry_df[telemetry_df["rule_name"] == rule_name]
-        if len(matched) > 0:
-            return matched, str(rule_name), "rule_name"
-
-    if psb_tool and "tool" in telemetry_df.columns:
-        matched = telemetry_df[telemetry_df["tool"] == psb_tool]
-        if len(matched) > 0:
-            return matched, str(psb_tool), "psb_tool"
-
-    if psb_primary_cmd and "command" in telemetry_df.columns:
-        matched = telemetry_df[telemetry_df["command"] == psb_primary_cmd]
-        if len(matched) > 0:
-            return matched, str(psb_primary_cmd), "psb_primary_cmd"
-
-    return telemetry_df.iloc[0:0], "", "unmatched"
+    return match_rule_to_telemetry(rule, telemetry_df)
 
 
 def _audit_statuses(
@@ -136,14 +116,14 @@ def _suggest_for_group(group_df: pd.DataFrame) -> tuple[float | None, float | No
     if "max_rss_mb" in group_df.columns:
         observed_p95_memory = float(group_df["max_rss_mb"].quantile(0.95))
         if pd.notna(observed_p95_memory) and observed_p95_memory > 0:
-            required_mem = observed_p95_memory * 1.25
-            suggested_mem = ceil(required_mem / 256) * 256
+            required_mem = required_memory_mb(observed_p95_memory)
+            suggested_mem = suggested_memory_mb(required_mem)
 
     if "runtime_sec" in group_df.columns:
         observed_p90_runtime = float(group_df["runtime_sec"].quantile(0.90))
         if pd.notna(observed_p90_runtime) and observed_p90_runtime > 0:
-            suggested_runtime_sec = ceil(observed_p90_runtime * 1.5)
-            suggested_runtime = _format_seconds_to_hms(suggested_runtime_sec)
+            suggested_runtime_sec = required_runtime_sec(observed_p90_runtime)
+            suggested_runtime = suggested_runtime_string(suggested_runtime_sec)
 
     return (
         observed_p95_memory,

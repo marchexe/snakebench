@@ -1,7 +1,5 @@
 rule align_reads:
     threads: 4
-    benchmark:
-        "benchmarks/align_reads.tsv"
     resources:
         mem_mb=512,
         runtime="00:00:20"
@@ -15,8 +13,6 @@ rule align_reads:
 
 rule sort_bam:
     threads: 4
-    benchmark:
-        "benchmarks/sort_bam.tsv"
     resources:
         mem_mb=256,
         runtime="00:00:01"
@@ -30,8 +26,6 @@ rule sort_bam:
 
 rule compress_fastq:
     threads: 1
-    benchmark:
-        "benchmarks/compress_fastq.tsv"
     resources:
         mem_mb=256,
         runtime="00:00:30"
@@ -45,8 +39,6 @@ rule compress_fastq:
 
 rule simulate_reads:
     threads: 1
-    benchmark:
-        "benchmarks/simulate_reads.tsv"
     resources:
         mem_mb=128,
         runtime="00:00:03"
@@ -60,8 +52,6 @@ rule simulate_reads:
 
 rule summarize_table:
     threads: 1
-    benchmark:
-        "benchmarks/summarize_table.tsv"
     resources:
         mem_mb=64,
         runtime="00:00:01"

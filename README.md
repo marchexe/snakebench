@@ -18,6 +18,7 @@ CLI tool for analyzing PSB-style Snakemake benchmark telemetry and auditing decl
 - Snakebench consumes exported PSB-style telemetry locally.
 - Snakebench should keep PSB field names and units.
 - See [docs/psb_upstream_mapping.md](docs/psb_upstream_mapping.md).
+- Architecture notes: [docs/architecture.md](docs/architecture.md).
 
 Upstream references:
 
@@ -62,10 +63,18 @@ snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out examp
 src/snakebench/
   psb.py          # PSB normalization
   load.py         # parquet loading
+  schema.py       # telemetry column names
+  resources.py    # resource estimation helpers
+  features.py     # input-size features
   summarize.py    # tool summaries
   advise.py       # resource suggestions
+  snakefile.py    # Snakefile resource parsing
+  matching.py     # audit matching helpers
   readiness.py    # readiness checks
   audit.py        # Snakefile resource audit
+  audit_metrics.py
+  audit_export.py
+  charts.py
   report.py       # markdown reports
   cli.py          # CLI entry point
 
@@ -73,6 +82,7 @@ docs/
   psb_upstream_mapping.md
   audit_mode_design.md
   integration_notes.md
+  architecture.md
 
 examples/demo_snakemake/
   README.md
