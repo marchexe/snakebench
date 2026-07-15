@@ -1,125 +1,81 @@
-# Snakebench Advisor
+# Snakebench
 
-Snakebench checks whether Snakemake resource declarations match observed PSB-style telemetry.
+Snakebench checks Snakemake resource declarations against a PSB-style telemetry corpus.
 
-Main command:
+I made it because `mem_mb` and `runtime` in Snakefiles are often guessed. If we collect telemetry from real runs, we can use it to find rules where the declared resources are missing, too low, too high, or roughly fine.
+
+This is not a predictor yet. It is an audit tool.
+
+## Main Command
 
 ```bash
 snakebench audit examples/demo_snakemake/Snakefile --telemetry data/
 ```
 
-Audit outputs can be written as:
+Inputs:
 
-- terminal table
-- CSV table
-- PNG charts
-- Markdown report
+- `examples/demo_snakemake/Snakefile`: demo rules with declared `threads`, `mem_mb`, `runtime`, and `_psb_*` hints.
+- `data/`: small sample of PSB-style telemetry. In the real use case this would be a larger shared telemetry export.
+
+Output:
+
+- terminal audit table.
+
+See [audit flow](docs/audit_flow.md) for the step-by-step path from Snakefile and telemetry to the audit table.
+
+## What Happens
+
+1. Read declared resources from the Snakefile.
+2. Load telemetry rows from parquet files.
+3. Match each Snakefile rule to telemetry.
+4. Estimate required memory and runtime from matched observations.
+5. Compare declared values with required values.
+6. Report missing, underrequested, overrequested, aligned, or unmatched rules.
+
+## Matching
+
+Best match:
+
+- telemetry has `rule_name`, and it equals the Snakefile rule name.
+
+Fallbacks:
+
+- Snakefile `params._psb_tool` matches telemetry `tool`.
+- Snakefile `params._psb_primary_cmd` matches telemetry `command`.
+
+The demo mostly uses `_psb_tool`, so it is a coarse example. For a real shared telemetry corpus, `rule_name` is the most important upstream field to add.
+
+See [telemetry contract](docs/telemetry_contract.md) for the PSB fields Snakebench uses and the upstream fields that matter most.
+
+## Exports
 
 ```bash
+snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out reports/audit_report.md
 snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --csv reports/audit_table.csv
 snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --charts reports/audit_charts
-snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out reports/audit_report.md
 ```
 
-## How It Works
+Generated audit artifacts:
 
-1. Load PSB-style telemetry from local parquet files.
-2. Parse declared resources and PSB-style annotations from a Snakefile.
-3. Match Snakefile rules to telemetry rows.
-4. Compare declared memory/runtime with observed telemetry.
-5. Export the audit results.
+- `reports/audit_report.md`
+- `reports/audit_table.csv`
+- `reports/audit_charts/status_counts.png`
+- `reports/audit_charts/declared_vs_required_memory_mb.png`
+- `reports/audit_charts/declared_vs_required_runtime_sec.png`
 
-See [docs/walkthrough.md](docs/walkthrough.md) for a concrete example and [docs/architecture.md](docs/architecture.md) for module boundaries.
+## What It Does Not Do
 
-## Demo
+- does not run Snakemake;
+- does not collect or submit telemetry;
+- does not rewrite Snakefiles;
+- does not train ML models;
+- does not run a backend or dashboard.
 
-`examples/demo_snakemake/` contains an audit demo Snakefile for `samtools`, `bwa-mem2`, `gzip`, `awk`, and `wgsim`.
+## Current Limits
 
-The Snakefile provides declared resources and PSB-style annotations. Telemetry comes from `data/`; benchmark TSV files are not required.
+- Tool-only matching can mix unrelated rules that call the same tool.
+- The Snakefile parser handles simple static declarations, not arbitrary Python logic.
+- Required resources are heuristic: memory p95 with a margin, runtime p90 with a margin.
+- The sample `data/` directory is only a tiny stand-in for the larger telemetry corpus this is meant to audit against.
 
-This is an audit demo Snakefile, not a complete executable workflow.
-
-## Secondary Commands
-
-- `snakebench summarize data/` - summarize runtime and memory by `tool`.
-- `snakebench advise data/` - generate tool-level resource suggestions.
-- `snakebench advise data/ --stratify input-size` - group suggestions by input-size bin.
-- `snakebench dry data/` - check dataset readiness and PSB compatibility.
-- `snakebench report data/ --out reports/example_report.md` - write a telemetry report.
-
-Chart export requires `pip install .[charts]`.
-
-## Upstream Alignment
-
-- PSB defines the telemetry schema, export format, and server.
-- `snakemake-logger-plugin-benchmark-telemetry` collects benchmark telemetry from Snakemake.
-- Snakebench consumes exported PSB-style telemetry locally.
-- Snakebench should keep PSB field names and units.
-- See [docs/psb_upstream_mapping.md](docs/psb_upstream_mapping.md).
-
-## Installation
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-python -m pytest tests/ -v
-```
-
-Windows PowerShell:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
-python -m pytest tests/ -v
-```
-
-Dependencies are `pandas`, `pyarrow`, and `tabulate`. Test dependency is `pytest`.
-
-## Repository Layout
-
-```text
-src/snakebench/
-  load.py
-  snakefile.py
-  matching.py
-  resource_estimation.py
-  audit.py
-  audit_export.py
-  audit_metrics.py
-  telemetry_schema.py
-  psb.py
-  charts.py
-  summarize.py
-  advise.py
-  readiness.py
-  features.py
-  report.py
-  cli.py
-
-docs/
-  walkthrough.md
-  architecture.md
-  psb_upstream_mapping.md
-  audit_mode_design.md
-  integration_notes.md
-
-reports/
-  example_report.md
-  readiness_report.md
-  audit_report.md
-  audit_table.csv
-  audit_charts/
-```
-
-`reports/` contains generated example outputs.
-
-## Limitations
-
-- Simple static Snakefile parser.
-- Best-effort rule matching.
-- Percentile heuristics, not ML.
-- No telemetry collection.
-- No backend or dashboard.
-- Demo data is small.
+See [technical summary](docs/technical_summary.md) for module names, formulas, and validation commands.

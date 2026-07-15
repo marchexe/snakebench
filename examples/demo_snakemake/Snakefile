@@ -1,3 +1,10 @@
+## Audit fixture for Snakebench.
+##
+## This Snakefile provides declared resources and PSB-style annotations for
+## `snakebench audit`. It is not a complete production workflow. Telemetry is
+## loaded from the sample corpus in `data/`; no benchmark TSV files are required.
+## `_psb_tool` and `_psb_primary_cmd` are used for best-effort rule matching.
+
 rule align_reads:
     threads: 4
     resources:
