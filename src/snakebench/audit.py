@@ -9,7 +9,7 @@ import pandas as pd
 from .audit_export import build_audit_markdown, write_audit_csv
 from .audit_metrics import build_audit_metrics
 from .matching import match_rule_to_telemetry
-from .resources import (
+from .resource_estimation import (
     required_memory_mb,
     required_runtime_sec,
     safe_gap,
@@ -102,8 +102,10 @@ def _audit_statuses(
     return "; ".join(statuses), " ".join(reasons)
 
 
-def _suggest_for_group(group_df: pd.DataFrame) -> tuple[float | None, float | None, float | None, float | None, str, float | None]:
-    if len(group_df) == 0:
+def _estimate_resources_from_telemetry(
+    matched_telemetry: pd.DataFrame,
+) -> tuple[float | None, float | None, float | None, float | None, str, float | None]:
+    if len(matched_telemetry) == 0:
         return None, None, None, None, "N/A", None
 
     observed_p95_memory = None
@@ -113,14 +115,14 @@ def _suggest_for_group(group_df: pd.DataFrame) -> tuple[float | None, float | No
     suggested_runtime = "N/A"
     suggested_runtime_sec = None
 
-    if "max_rss_mb" in group_df.columns:
-        observed_p95_memory = float(group_df["max_rss_mb"].quantile(0.95))
+    if "max_rss_mb" in matched_telemetry.columns:
+        observed_p95_memory = float(matched_telemetry["max_rss_mb"].quantile(0.95))
         if pd.notna(observed_p95_memory) and observed_p95_memory > 0:
             required_mem = required_memory_mb(observed_p95_memory)
             suggested_mem = suggested_memory_mb(required_mem)
 
-    if "runtime_sec" in group_df.columns:
-        observed_p90_runtime = float(group_df["runtime_sec"].quantile(0.90))
+    if "runtime_sec" in matched_telemetry.columns:
+        observed_p90_runtime = float(matched_telemetry["runtime_sec"].quantile(0.90))
         if pd.notna(observed_p90_runtime) and observed_p90_runtime > 0:
             suggested_runtime_sec = required_runtime_sec(observed_p90_runtime)
             suggested_runtime = suggested_runtime_string(suggested_runtime_sec)
@@ -135,10 +137,60 @@ def _suggest_for_group(group_df: pd.DataFrame) -> tuple[float | None, float | No
     )
 
 
+def _build_audit_row(
+    rule: dict,
+    match_key: str,
+    match_type: str,
+    observations: int,
+    observed_p95_memory: float | None,
+    required_mem: float | None,
+    observed_p90_runtime: float | None,
+    suggested_mem: float | None,
+    suggested_runtime: str,
+    suggested_runtime_sec: float | None,
+) -> AuditRow:
+    declared_mem = rule.get("mem_mb")
+    declared_runtime = rule.get("runtime")
+    declared_runtime_sec = _parse_runtime_seconds(declared_runtime)
+    status, reason = _audit_statuses(
+        observations,
+        declared_mem,
+        declared_runtime,
+        required_mem,
+        suggested_mem,
+        suggested_runtime_sec,
+    )
+
+    return AuditRow(
+        rule_name=rule.get("rule_name", ""),
+        match_key=match_key,
+        match_type=match_type,
+        observations=observations,
+        declared_threads=rule.get("threads"),
+        declared_mem_mb=declared_mem,
+        declared_runtime=declared_runtime,
+        declared_runtime_sec=declared_runtime_sec,
+        observed_p95_memory_mb=observed_p95_memory,
+        required_mem_mb=required_mem,
+        observed_p90_runtime_sec=observed_p90_runtime,
+        required_runtime_sec=suggested_runtime_sec,
+        suggested_mem_mb=suggested_mem,
+        suggested_runtime=suggested_runtime,
+        memory_gap_mb=_safe_gap(declared_mem, required_mem),
+        memory_ratio=_safe_ratio(declared_mem, required_mem),
+        runtime_gap_sec=_safe_gap(declared_runtime_sec, suggested_runtime_sec),
+        runtime_ratio=_safe_ratio(declared_runtime_sec, suggested_runtime_sec),
+        status=status,
+        reason=reason,
+    )
+
+
 def audit_rules(rules: list[dict], telemetry_df: pd.DataFrame) -> pd.DataFrame:
-    """Compare parsed Snakefile rules against observed telemetry suggestions."""
+    """Compare parsed Snakefile rules against observed telemetry."""
     rows = []
 
+    # Each rule follows the same audit path:
+    # match telemetry, estimate required resources, assign status, export row.
     for rule in rules:
         matched, match_key, match_type = _match_rule(rule, telemetry_df)
         observations = int(len(matched))
@@ -149,41 +201,19 @@ def audit_rules(rules: list[dict], telemetry_df: pd.DataFrame) -> pd.DataFrame:
             suggested_mem,
             suggested_runtime,
             suggested_runtime_sec,
-        ) = _suggest_for_group(matched)
+        ) = _estimate_resources_from_telemetry(matched)
 
-        declared_mem = rule.get("mem_mb")
-        declared_runtime = rule.get("runtime")
-        declared_runtime_sec = _parse_runtime_seconds(declared_runtime)
-        status, reason = _audit_statuses(
+        row = _build_audit_row(
+            rule,
+            match_key,
+            match_type,
             observations,
-            declared_mem,
-            declared_runtime,
+            observed_p95_memory,
             required_mem,
+            observed_p90_runtime,
             suggested_mem,
+            suggested_runtime,
             suggested_runtime_sec,
-        )
-
-        row = AuditRow(
-            rule_name=rule.get("rule_name", ""),
-            match_key=match_key,
-            match_type=match_type,
-            observations=observations,
-            declared_threads=rule.get("threads"),
-            declared_mem_mb=declared_mem,
-            declared_runtime=declared_runtime,
-            declared_runtime_sec=declared_runtime_sec,
-            observed_p95_memory_mb=observed_p95_memory,
-            required_mem_mb=required_mem,
-            observed_p90_runtime_sec=observed_p90_runtime,
-            required_runtime_sec=suggested_runtime_sec,
-            suggested_mem_mb=suggested_mem,
-            suggested_runtime=suggested_runtime,
-            memory_gap_mb=_safe_gap(declared_mem, required_mem),
-            memory_ratio=_safe_ratio(declared_mem, required_mem),
-            runtime_gap_sec=_safe_gap(declared_runtime_sec, suggested_runtime_sec),
-            runtime_ratio=_safe_ratio(declared_runtime_sec, suggested_runtime_sec),
-            status=status,
-            reason=reason,
         )
         rows.append(asdict(row))
 

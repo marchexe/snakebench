@@ -2,31 +2,41 @@
 
 Snakebench is a downstream local audit layer for PSB-style Snakemake telemetry.
 
-# Data Flow
+# Where To Start
 
-Snakemake workflow
--> `snakemake-logger-plugin-benchmark-telemetry`
--> PSB-style telemetry export
--> Snakebench
+Start with the audit path. It is the main use case:
 
-# Module Boundaries
+1. `cli.py` receives the command.
+2. `load.py` loads telemetry from local parquet files.
+3. `snakefile.py` parses declared resources and PSB-style annotations.
+4. `matching.py` matches rules to telemetry rows.
+5. `resource_estimation.py` estimates required memory and runtime.
+6. `audit.py` assigns audit status and returns a result table.
 
-- `load.py`: load local parquet telemetry files.
-- `psb.py`: normalize PSB-style fields while preserving source columns.
-- `schema.py`: centralize telemetry column names and lookup helpers.
-- `features.py`: derive local feature columns such as input-size bins.
-- `summarize.py`: summarize observed runtime and memory by tool.
-- `resources.py`: shared memory, runtime, gap, and ratio calculations.
-- `advise.py`: build percentile-based resource suggestions.
-- `snakefile.py`: parse simple static Snakefile resource declarations.
-- `matching.py`: match Snakefile rules to telemetry in audit priority order.
+# Core Audit Path
+
+- `cli.py`: command-line entry point.
 - `audit.py`: compare declared rule resources against observed telemetry.
+- `snakefile.py`: parse simple static Snakefile resource declarations.
+- `matching.py`: match Snakefile rules to telemetry in priority order.
+- `resource_estimation.py`: shared memory, runtime, gap, and ratio calculations.
+- `load.py`: load local parquet telemetry files.
+
+# Support Modules
+
+- `telemetry_schema.py`: telemetry column names and lookup helpers.
+- `psb.py`: normalize PSB-style fields while preserving source columns.
 - `audit_metrics.py`: aggregate audit result counts.
 - `audit_export.py`: write audit Markdown and CSV artifacts.
 - `charts.py`: write optional audit PNG charts.
+
+# Secondary Commands
+
+- `summarize.py`: summarize observed runtime and memory by tool.
+- `advise.py`: build percentile-based resource suggestions.
 - `readiness.py`: inspect telemetry completeness and PSB compatibility.
+- `features.py`: derive local feature columns such as input-size bins.
 - `report.py`: build Markdown summary reports.
-- `cli.py`: command-line entry point.
 
 # Audit Semantics
 

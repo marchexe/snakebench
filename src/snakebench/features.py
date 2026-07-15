@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 
-from .schema import INPUT_SIZE_BYTE_COLUMNS, INPUT_SIZE_MB_COLUMNS, find_column
+from .telemetry_schema import INPUT_SIZE_BYTE_COLUMNS, INPUT_SIZE_MB_COLUMNS, find_column
 
 
 def detect_input_size_column(df: pd.DataFrame) -> Optional[str]:

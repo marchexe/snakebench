@@ -4,8 +4,13 @@ import pandas as pd
 import numpy as np
 from typing import Optional, List
 
-from .resources import required_memory_mb, required_runtime_sec, suggested_memory_mb, suggested_runtime_string
-from .schema import MEMORY_COLUMNS, RUNTIME_COLUMNS, find_column
+from .resource_estimation import (
+    required_memory_mb,
+    required_runtime_sec,
+    suggested_memory_mb,
+    suggested_runtime_string,
+)
+from .telemetry_schema import MEMORY_COLUMNS, RUNTIME_COLUMNS, find_column
 
 
 def confidence_level(n: int, cv: float = None) -> str:

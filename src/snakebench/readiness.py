@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from .psb import is_psb_like_row
-from .schema import (
+from .telemetry_schema import (
     DECLARED_RESOURCE_COLUMNS,
     ENVIRONMENT_COLUMNS,
     FAILURE_COLUMNS,

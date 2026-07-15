@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 
-from .schema import (
+from .telemetry_schema import (
     MEMORY_COLUMNS,
     RUNTIME_COLUMNS,
     THREAD_COLUMNS,

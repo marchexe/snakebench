@@ -1,15 +1,53 @@
 # Snakebench Advisor
 
-CLI tool for analyzing PSB-style Snakemake benchmark telemetry and auditing declared Snakemake resources against observed runtime and memory usage.
+Snakebench checks whether Snakemake resource declarations match observed PSB-style telemetry.
 
-## Scope
+Main command:
 
-- Reads local PSB-style parquet telemetry.
-- Normalizes PSB fields: `input_size`, `output_size`, `resources`, environment metadata.
-- Summarizes runtime and memory by tool.
-- Derives percentile-based resource suggestions.
-- Audits simple static Snakefile resource declarations.
-- Does not collect telemetry.
+```bash
+snakebench audit examples/demo_snakemake/Snakefile --telemetry data/
+```
+
+Audit outputs can be written as:
+
+- terminal table
+- CSV table
+- PNG charts
+- Markdown report
+
+```bash
+snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --csv reports/audit_table.csv
+snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --charts reports/audit_charts
+snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out reports/audit_report.md
+```
+
+## How It Works
+
+1. Load PSB-style telemetry from local parquet files.
+2. Parse declared resources and PSB-style annotations from a Snakefile.
+3. Match Snakefile rules to telemetry rows.
+4. Compare declared memory/runtime with observed telemetry.
+5. Export the audit results.
+
+See [docs/walkthrough.md](docs/walkthrough.md) for a concrete example and [docs/architecture.md](docs/architecture.md) for module boundaries.
+
+## Demo
+
+`examples/demo_snakemake/` contains an audit demo Snakefile for `samtools`, `bwa-mem2`, `gzip`, `awk`, and `wgsim`.
+
+The Snakefile provides declared resources and PSB-style annotations. Telemetry comes from `data/`; benchmark TSV files are not required.
+
+This is an audit demo Snakefile, not a complete executable workflow.
+
+## Secondary Commands
+
+- `snakebench summarize data/` - summarize runtime and memory by `tool`.
+- `snakebench advise data/` - generate tool-level resource suggestions.
+- `snakebench advise data/ --stratify input-size` - group suggestions by input-size bin.
+- `snakebench dry data/` - check dataset readiness and PSB compatibility.
+- `snakebench report data/ --out reports/example_report.md` - write a telemetry report.
+
+Chart export requires `pip install .[charts]`.
 
 ## Upstream Alignment
 
@@ -18,87 +56,6 @@ CLI tool for analyzing PSB-style Snakemake benchmark telemetry and auditing decl
 - Snakebench consumes exported PSB-style telemetry locally.
 - Snakebench should keep PSB field names and units.
 - See [docs/psb_upstream_mapping.md](docs/psb_upstream_mapping.md).
-- Architecture notes: [docs/architecture.md](docs/architecture.md).
-
-Upstream references:
-
-- <https://github.com/btraven00/psb/blob/main/docs/spec.md>
-- <https://github.com/btraven00/psb/blob/main/docs/roadmap.md>
-- <https://github.com/btraven00/snakemake-logger-plugin-benchmark-telemetry>
-
-## Commands
-
-- `snakebench summarize data/` - summarize runtime and memory by `tool`.
-- `snakebench advise data/` - generate tool-level resource suggestions.
-- `snakebench advise data/ --stratify input-size` - group suggestions by input-size bin.
-- `snakebench dry data/` - check dataset readiness and PSB compatibility.
-- `snakebench report data/ --out reports/example_report.md` - write a telemetry report.
-- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/` - audit Snakefile resources.
-- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out reports/audit_report.md` - write an audit report.
-- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --csv reports/audit_table.csv` - write the audit table.
-- `snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --charts reports/audit_charts` - write audit charts.
-
-Chart export requires `pip install .[charts]`.
-
-## Demo
-
-`examples/demo_snakemake/` contains an audit demo Snakefile for `samtools`, `bwa-mem2`, `gzip`, `awk`, and `wgsim`.
-
-This is an audit demo Snakefile, not a complete executable workflow.
-
-Matching uses PSB annotations:
-
-- `_psb_tool` -> telemetry `tool`
-- `_psb_primary_cmd` -> telemetry `command`
-
-Run:
-
-```bash
-snakebench audit examples/demo_snakemake/Snakefile --telemetry data/ --out examples/demo_snakemake/expected_audit_report.md
-```
-
-## Layout
-
-```text
-src/snakebench/
-  psb.py          # PSB normalization
-  load.py         # parquet loading
-  schema.py       # telemetry column names
-  resources.py    # resource estimation helpers
-  features.py     # input-size features
-  summarize.py    # tool summaries
-  advise.py       # resource suggestions
-  snakefile.py    # Snakefile resource parsing
-  matching.py     # audit matching helpers
-  readiness.py    # readiness checks
-  audit.py        # Snakefile resource audit
-  audit_metrics.py
-  audit_export.py
-  charts.py
-  report.py       # markdown reports
-  cli.py          # CLI entry point
-
-docs/
-  psb_upstream_mapping.md
-  audit_mode_design.md
-  integration_notes.md
-  architecture.md
-
-examples/demo_snakemake/
-  README.md
-  Snakefile
-  config.yaml
-  expected_audit_report.md
-
-reports/
-  example_report.md
-  readiness_report.md
-  audit_report.md
-  audit_table.csv
-  audit_charts/
-```
-
-`reports/` contains generated example outputs.
 
 ## Installation
 
@@ -120,6 +77,44 @@ python -m pytest tests/ -v
 
 Dependencies are `pandas`, `pyarrow`, and `tabulate`. Test dependency is `pytest`.
 
+## Repository Layout
+
+```text
+src/snakebench/
+  load.py
+  snakefile.py
+  matching.py
+  resource_estimation.py
+  audit.py
+  audit_export.py
+  audit_metrics.py
+  telemetry_schema.py
+  psb.py
+  charts.py
+  summarize.py
+  advise.py
+  readiness.py
+  features.py
+  report.py
+  cli.py
+
+docs/
+  walkthrough.md
+  architecture.md
+  psb_upstream_mapping.md
+  audit_mode_design.md
+  integration_notes.md
+
+reports/
+  example_report.md
+  readiness_report.md
+  audit_report.md
+  audit_table.csv
+  audit_charts/
+```
+
+`reports/` contains generated example outputs.
+
 ## Limitations
 
 - Simple static Snakefile parser.
@@ -128,12 +123,3 @@ Dependencies are `pandas`, `pyarrow`, and `tabulate`. Test dependency is `pytest
 - No telemetry collection.
 - No backend or dashboard.
 - Demo data is small.
-- Plugin currently may emit less metadata than the PSB spec supports.
-
-## Next Integration Work
-
-- Improve plugin output: `rule_name`, `resources`, `inputs`/`outputs`, `tool_version`, `category`.
-- Improve rule matching.
-- Make the demo workflow fully runnable.
-- Add a rule mapping file for unmatched rules.
-- Evaluate prediction later, after enough data and baselines exist.

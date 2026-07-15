@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from snakebench.schema import (
+from snakebench.telemetry_schema import (
     MEMORY_COLUMNS,
     RUNTIME_COLUMNS,
     find_column,
@@ -11,6 +11,8 @@ from snakebench.schema import (
     has_column,
     require_column,
 )
+
+from snakebench import schema
 
 
 def test_find_column_returns_first_matching_candidate():
@@ -37,3 +39,7 @@ def test_require_column_raises_with_logical_name():
 
     with pytest.raises(ValueError, match="runtime"):
         require_column(df, RUNTIME_COLUMNS, "runtime")
+
+
+def test_schema_compatibility_wrapper_exports_helpers():
+    assert schema.find_column(pd.DataFrame({"runtime_sec": [1.0]}), RUNTIME_COLUMNS) == "runtime_sec"

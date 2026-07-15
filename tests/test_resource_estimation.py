@@ -1,6 +1,6 @@
 """Tests for shared resource estimation helpers."""
 
-from snakebench.resources import (
+from snakebench.resource_estimation import (
     required_memory_mb,
     required_runtime_sec,
     safe_gap,
@@ -8,6 +8,8 @@ from snakebench.resources import (
     suggested_memory_mb,
     suggested_runtime_string,
 )
+
+from snakebench import resources
 
 
 def test_required_memory_and_scheduler_rounding_are_separate():
@@ -33,3 +35,7 @@ def test_gap_and_ratio_preserve_missing_values():
     assert safe_ratio(64.0, 0.0) is None
     assert safe_gap(64.0, 10.0) == 54.0
     assert safe_ratio(64.0, 10.0) == 6.4
+
+
+def test_resources_compatibility_wrapper_exports_helpers():
+    assert resources.required_memory_mb(8.0) == 10.0
