@@ -64,7 +64,7 @@ def build_markdown_report(
         [column for column in suggestion_columns if column in suggestions_df.columns]
     ].copy()
 
-    report = f"""# Snakebench Advisor Report
+    report = f"""# Snakebench Telemetry Report
 
 **Generated:** {timestamp}
 
@@ -94,7 +94,7 @@ def build_markdown_report(
 
 ## Resource Suggestions
 
-Runtime suggestion uses `ceil(p90_runtime * 1.5)`. Memory requirement uses p95(max_rss_mb) × 1.25. The displayed suggested_mem_mb is rounded up to the nearest 256 MB for scheduler-friendly resource declarations.
+Runtime suggestion uses `ceil(p90_runtime * 1.5)`. Memory requirement uses `p95(max_rss_mb) * 1.25`. The displayed suggested_mem_mb is rounded up to the nearest 256 MB for scheduler-friendly resource declarations.
 
 Audit memory status is based on required_mem_mb, not the rounded suggested_mem_mb.
 
@@ -140,7 +140,7 @@ Audit memory status is based on required_mem_mb, not the rounded suggested_mem_m
 
 ---
 
-**Version:** Snakebench Advisor v0.6.2
+**Version:** Snakebench v0.6.2
 **Status:** Prototype
 """
 

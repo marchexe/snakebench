@@ -35,7 +35,7 @@ def required_runtime_sec(
     observed_p90_runtime_sec: float | None,
     safety_factor: float = 1.5,
 ) -> int | None:
-    """Return required runtime seconds using the current advisor formula."""
+    """Return required runtime seconds using the current audit formula."""
     if observed_p90_runtime_sec is None or pd.isna(observed_p90_runtime_sec):
         return None
     if observed_p90_runtime_sec <= 0:

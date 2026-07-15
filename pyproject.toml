@@ -3,9 +3,9 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "snakebench-advisor"
+name = "snakebench"
 version = "0.6.2"
-description = "Telemetry-driven Snakemake resource advisor using PSB-style benchmarks"
+description = "Audit Snakemake resource declarations against PSB-style telemetry"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [

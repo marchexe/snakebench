@@ -1,4 +1,4 @@
-"""Command-line interface for Snakebench Advisor."""
+"""Command-line interface for Snakebench."""
 
 import argparse
 from pathlib import Path
@@ -204,7 +204,7 @@ def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
         prog="snakebench",
-        description="Telemetry-driven Snakemake resource advisor",
+        description="Audit Snakemake resource declarations against PSB-style telemetry",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -247,8 +247,8 @@ def main():
     )
     report_parser.add_argument(
         "--out",
-        default="reports/example_report.md",
-        help="Output file path (default: reports/example_report.md)",
+        default="reports/telemetry_report.md",
+        help="Output file path (default: reports/telemetry_report.md)",
     )
     report_parser.set_defaults(func=cmd_report)
 
